@@ -1,0 +1,53 @@
+POC 단계: OpenTripPlanner 기반 Isochrone API PRD
+
+Overview  
+이 POC는 한국 대중교통 GTFS 데이터를 활용해 OpenTripPlanner(OTP)의 RAPTOR 알고리즘을 이용, 특정 지점에서 설정한 시간 내 대중교통 도달 가능 범위를 계산하는 API 서비스를 구축하는 데 목적이 있습니다.  
+초기 단계에서는 API 기능 구현 및 성능 확인에 집중하며, 추후 부동산 데이터 연동, API 확장, 웹 UI 개발 등은 별도 단계로 분리합니다.
+
+Core Feature: Isochrone API  
+
+기능  
+- 특정 위경도 지점과 이동 시간을 받아 대중교통 이동 가능 범위를 폴리곤 형태로 반환  
+- REST API 형태로 외부 호출 가능 (예: /api/v1/isochrone)  
+- OpenTripPlanner 2.2+ RAPTOR 알고리즘 사용
+
+중요성  
+- POC 핵심 기능으로, 대중교통 기반 교통 접근성의 정확한 산출 검증  
+- API 성능 및 안정성 평가 기반 마련
+
+동작 방식  
+- GTFS 및 OSM 데이터를 OTP에 로드하고 그래프를 빌드  
+- API 요청 시 출발지, 최대 이동시간, 이동 수단 파라미터 수신  
+- OTP 엔진을 통해 isochrone 계산 후 GeoJSON Polygon 응답  
+
+Technical Architecture  
+
+시스템 컴포넌트  
+- OpenTripPlanner 2.2+ (Java 21 권장)  
+- Docker 컨테이너 환경  
+- 한국 GTFS 및 OpenStreetMap 데이터  
+- REST API 엔드포인트 with OTP 내장이용
+
+데이터 모델 (예시 삭제)  
+- OTP 내장 API가 이미 REST 인터페이스를 제공하므로 별도의 JSON 데이터 모델 정의가 꼭 필요하지 않습니다.  
+- API 호출 시 OTP에서 요구하는 쿼리 파라미터 형식(예: 출발지 좌표, 최대 이동 시간, 이동 수단, 출발 시간 등)을 직접 사용하면 됩니다.
+
+Development Roadmap (POC)  
+
+단계  
+1. OTP 환경 구축 및 한국 GTFS/OSM 데이터 통합  
+2. Docker 기반 그래프 빌드 및 서버 실행  
+3. REST API 호출 테스트 및 결과 검증  
+4. 성능 측정 (응답시간, 메모리 사용) 및 기본 튜닝
+
+제외 항목  
+- 부동산 데이터 연계  
+- API 확장 기능(접근성 점수 등)  
+- 웹 UI 및 사용자 인증  
+- 대규모 멀티인스턴스 배포
+
+Success Criteria  
+- 기본 isochrone API 정상 동작 (GeoJSON 정상 반환)  
+- 서울 강남 기준 60분 isochrone 계산 시간 15-25초 이내 달성  
+- 메모리 8-12GB 내 안정적 운영  
+- 외부 REST 호출 성공률 95% 이상

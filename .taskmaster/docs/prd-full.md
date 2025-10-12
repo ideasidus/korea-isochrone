@@ -314,7 +314,7 @@
 
 **필수 선행 요소**:
 
-- Java 17 + Docker 개발 환경 구성
+- Java 21 + Docker 개발 환경 구성
 - 한국 GTFS 데이터 수집 및 전처리
 - OpenTripPlanner 설치 및 그래프 빌드
 - 기본 Docker Compose 설정
@@ -502,7 +502,7 @@ Recommended:
 ```
 Backend:
   - OpenTripPlanner 2.2+
-  - Java 17 (OpenJDK)
+  - Java 21 (OpenJDK)
   - Spring Boot 3.x
   - PostgreSQL 15 + PostGIS
   - Redis 7.x

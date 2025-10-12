@@ -3,77 +3,75 @@
     "tasks": [
       {
         "id": 1,
-        "title": "Java 17 + Docker 개발 환경 및 기본 인프라 구성",
-        "description": "프로젝트의 기반이 되는 Java 17, Docker, Docker Compose 환경을 구축하고, PostgreSQL, Redis, Nginx 등 핵심 인프라 컨테이너를 설정합니다.",
-        "details": "Dockerfile 및 docker-compose.yml을 작성하여 OpenTripPlanner, Spring Boot, PostgreSQL(PostGIS), Redis, Nginx 컨테이너를 정의합니다. JVM 옵션(G1GC, 힙 8-12GB) 적용. Oracle Cloud ARM 환경에 맞게 리소스 할당 및 네트워크 설정.",
-        "testStrategy": "각 컨테이너가 정상적으로 기동되는지 확인하고, 네트워크 연결 및 포트 매핑 테스트. Docker Compose up/down 반복 테스트 및 로그 모니터링.",
+        "title": "OTP 환경 및 프로젝트 초기화",
+        "description": "OpenTripPlanner(OTP) 2.2+ 환경을 Java 21 및 Docker 기반으로 초기화하고, 프로젝트 구조를 세팅합니다.",
+        "details": "Dockerfile을 작성하여 Java 21 기반 OTP 이미지를 빌드합니다. 프로젝트 루트에 docker-compose.yml을 생성하여 OTP 서버 컨테이너를 정의합니다. OTP 공식 문서에 따라 환경변수 및 볼륨 마운트 경로를 설정합니다.",
+        "testStrategy": "Docker 컨테이너 실행 후 OTP 서버가 정상적으로 기동되는지, /otp/routers/default/health 엔드포인트에서 상태 확인.",
         "priority": "high",
         "dependencies": [],
         "status": "pending",
         "subtasks": [
           {
             "id": 1,
-            "title": "Docker Compose 기본 구조 및 공유 네트워크 설정",
-            "description": "`docker-compose.yml` 파일을 초기화하고 프로젝트의 모든 서비스가 공유할 내부 네트워크를 설정합니다. Oracle Cloud ARM 환경의 특성을 고려하여 네트워크 구성을 계획합니다.",
+            "title": "Java 21 및 OTP 기반 Dockerfile 작성",
+            "description": "OpenTripPlanner(OTP) 2.2+ 버전을 실행하기 위한 Java 21 환경의 Dockerfile을 정의합니다. OTP JAR 파일을 다운로드하고 실행 가능한 환경을 구성합니다.",
             "dependencies": [],
-            "details": "프로젝트 루트에 `docker-compose.yml` 파일을 생성하고 `version: '3.8'`과 같은 Docker Compose 버전을 명시합니다. `networks` 섹션을 정의하여 브릿지 네트워크(`isochrone-network` 등)를 생성하고, 추후 추가될 서비스들이 이 네트워크를 사용하도록 기본 설정을 합니다. Oracle Cloud ARM 환경에 맞는 리소스 제약 사항을 염두에 둡니다.",
+            "details": "공식 `eclipse-temurin:21-jre-jammy` 이미지를 기반으로 Dockerfile을 작성합니다. `ARG`를 사용하여 OTP 버전을 동적으로 지정하고, `wget` 또는 `curl`을 사용하여 Maven Central에서 지정된 버전의 OTP JAR 파일을 다운로드합니다.",
             "status": "pending",
-            "testStrategy": "`docker-compose.yml` 파일의 문법적 오류가 없는지 `docker-compose config` 명령으로 확인합니다. `docker network ls` 명령어를 통해 생성될 네트워크 이름을 미리 확인하여 계획된 네트워크 설정이 유효한지 검증합니다."
+            "testStrategy": "`docker build . -t otp-server` 명령어를 실행하여 이미지가 오류 없이 성공적으로 빌드되는지 확인합니다."
           },
           {
             "id": 2,
-            "title": "PostgreSQL (PostGIS) 및 Redis 컨테이너 구성",
-            "description": "프로젝트의 데이터베이스와 캐싱/세션 저장을 위한 PostgreSQL (PostGIS 확장 포함)과 Redis 컨테이너를 `docker-compose.yml`에 정의합니다.",
-            "dependencies": [
-              1
-            ],
-            "details": "`docker-compose.yml` 파일에 `db` 서비스(PostGIS 이미지, 예: `postgis/postgis:13-3.1`)와 `redis` 서비스(Redis 이미지, 예: `redis:6-alpine`)를 추가합니다. 각 서비스에 영구 데이터 저장을 위한 볼륨(`volumes`)을 설정하고, 필요한 환경 변수(`environment`, 예: `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `REDIS_PASSWORD`)를 구성합니다. 내부 통신을 위해 `isochrone-network`에 연결하고, 필요시 외부 접근을 위한 포트 매핑(`ports`)을 정의합니다.",
+            "title": "OTP 데이터 및 설정용 디렉토리 구조 생성",
+            "description": "OTP의 그래프 데이터(GTFS, OSM)와 설정 파일을 관리하기 위한 호스트 머신의 디렉토리 구조를 생성합니다. 이 구조는 Docker 컨테이너에 볼륨으로 마운트됩니다.",
+            "dependencies": [],
+            "details": "프로젝트 루트에 `otp_data` 디렉토리를 생성하고, 그 하위에 `graphs/default`, `gtfs`, `osm` 디렉토리를 순차적으로 생성합니다. `graphs/default` 디렉토리는 OTP가 빌드한 그래프 파일과 설정 파일을 저장하는 데 사용됩니다.",
             "status": "pending",
-            "testStrategy": "`docker-compose up -d db redis` 실행 후 `docker ps`로 컨테이너 상태를 확인합니다. `docker logs db` 및 `docker logs redis` 명령으로 컨테이너 로그를 확인하여 정상 기동 여부를 검증합니다. PostgreSQL 컨테이너에 `psql` 클라이언트로 접속하여 PostGIS 확장이 활성화되었는지 확인하고, `redis-cli`로 Redis 접속 테스트를 진행합니다."
+            "testStrategy": "`ls -R otp_data` 명령어를 실행하여 `otp_data/graphs/default`, `otp_data/gtfs`, `otp_data/osm` 디렉토리 구조가 올바르게 생성되었는지 확인합니다."
           },
           {
             "id": 3,
-            "title": "Nginx 리버스 프록시 컨테이너 구성",
-            "description": "클라이언트 요청을 Spring Boot 및 OpenTripPlanner 서비스로 라우팅하고 정적 파일을 서빙할 Nginx 리버스 프록시 컨테이너를 설정합니다.",
+            "title": "OTP 서버 및 그래프 빌드 기본 설정 파일 생성",
+            "description": "OTP 서버의 기본 동작을 정의하는 `otp-config.json`과 그래프 데이터 빌드 설정을 위한 `build-config.json`의 초기 템플릿 파일을 생성합니다.",
             "dependencies": [
-              1
+              2
             ],
-            "details": "`docker-compose.yml` 파일에 `nginx` 서비스를 추가하고, Nginx 설정 파일을 위한 `nginx` 디렉토리와 `nginx/nginx.conf` 파일을 생성하여 볼륨으로 마운트합니다. `nginx.conf`에는 80 포트로 들어오는 요청을 Spring Boot와 OpenTripPlanner 서비스로 전달할 리버스 프록시 설정, 캐싱 정책, 정적 파일 서빙 경로 등을 포함합니다. `ports: ['80:80']`을 통해 80 포트를 외부에 노출하고 `isochrone-network`에 연결합니다.",
+            "details": "`otp_data/graphs/default` 디렉토리 내에 비어 있거나 최소한의 설정만 포함된 `build-config.json`과 `otp-config.json` 파일을 생성합니다. `otp-config.json`에는 라우터 설정(`routingDefaults`)과 같은 기본 구조를 포함시킵니다.",
             "status": "pending",
-            "testStrategy": "`docker-compose up -d nginx` 실행 후 `docker ps`로 Nginx 컨테이너의 정상 기동을 확인합니다. `docker logs nginx` 명령으로 Nginx 컨테이너의 로그를 확인하고, `curl localhost` 명령으로 Nginx가 정상적으로 응답하는지 확인합니다. `nginx/nginx.conf` 파일의 문법 오류 여부를 `docker exec -it <nginx_container_id> nginx -t`로 검증합니다."
+            "testStrategy": "생성된 JSON 파일들이 유효한 형식인지 `jq . otp_data/graphs/default/*.json`과 같은 JSON 파싱 도구를 사용하여 검증합니다."
           },
           {
             "id": 4,
-            "title": "Spring Boot 애플리케이션 Dockerfile 작성 및 서비스 추가",
-            "description": "Java 17 기반의 Spring Boot 애플리케이션을 Docker 이미지로 빌드하고, `docker-compose.yml`에 서비스로 추가합니다.",
+            "title": "Docker Compose를 이용한 OTP 서비스 정의",
+            "description": "OTP 서버 컨테이너를 쉽게 실행하고 관리할 수 있도록 `docker-compose.yml` 파일을 작성합니다. 포트 매핑, 볼륨 마운트, 환경 변수 설정을 포함합니다.",
             "dependencies": [
               1,
-              3
+              2
             ],
-            "details": "Spring Boot 프로젝트 루트에 `Dockerfile.spring` (또는 `Dockerfile`)을 작성합니다. `FROM eclipse-temurin:17-jdk-jammy`와 같은 Java 17 기반 이미지를 베이스로 사용하고, 애플리케이션 빌드 및 실행 단계를 정의합니다. `JAVA_TOOL_OPTIONS` 환경 변수에 `-XX:+UseG1GC -Xmx8g -Xms8g`와 같은 JVM 힙 메모리 옵션을 설정합니다. Spring Boot JAR 파일을 컨테이너 내부에 복사하고 실행 명령을 정의합니다. `docker-compose.yml`에 `spring-boot` 서비스를 추가하고 `isochrone-network`에 연결하며, Nginx 서비스의 타겟으로 설정합니다.",
+            "details": "프로젝트 루트에 `docker-compose.yml` 파일을 생성합니다. Subtask 1에서 작성한 Dockerfile을 `build` 컨텍스트로 지정합니다. `8080:8080` 포트를 매핑하고, `otp_data` 디렉토리를 컨테이너의 `/var/otp` 경로에 마운트합니다. `JAVA_OPTS` 환경 변수를 사용하여 OTP 서버의 힙 메모리(-Xmx, -Xms)를 설정합니다.",
             "status": "pending",
-            "testStrategy": "`docker build -f Dockerfile.spring -t korea-isochrone-spring-boot .` 명령으로 Dockerfile이 정상적으로 빌드되는지 확인합니다. `docker-compose up -d spring-boot` 실행 후 `docker ps` 및 `docker logs spring-boot`로 서비스 기동과 초기화 로그를 확인합니다. Nginx 프록시를 통해 Spring Boot 애플리케이션의 기본 엔드포인트에 접근하여 정상 동작을 검증합니다."
+            "testStrategy": "`docker-compose config` 명령어를 실행하여 `docker-compose.yml` 파일의 구문이 유효하고 설정이 올바르게 로드되는지 확인합니다."
           },
           {
             "id": 5,
-            "title": "OpenTripPlanner Dockerfile 작성 및 서비스 추가 + 최종 환경 검증",
-            "description": "OpenTripPlanner 2.2+를 위한 Docker 이미지를 빌드하고, `docker-compose.yml`에 서비스로 추가한 후 전체 환경을 통합 검증하고 최적화합니다.",
+            "title": "OTP 컨테이너 초기 실행 및 상태 확인",
+            "description": "작성된 `docker-compose.yml`을 사용하여 OTP 컨테이너를 실행하고, 서버 애플리케이션이 정상적으로 기동되는지 기본 엔드포인트를 통해 확인합니다.",
             "dependencies": [
-              1,
-              3
+              3,
+              4
             ],
-            "details": "OpenTripPlanner를 위한 `Dockerfile.otp`를 작성합니다. Java 17 기반 이미지 (`eclipse-temurin:17-jdk-jammy`)를 사용하고, OpenTripPlanner 2.2+의 JAR 파일을 다운로드하여 컨테이너 내부에 복사합니다. `JAVA_TOOL_OPTIONS` 환경 변수에 `-XX:+UseG1GC -Xmx10g -Xms10g` (8-12GB 범위 내) JVM 힙 메모리 옵션을 설정하고 실행 명령을 정의합니다. `docker-compose.yml`에 `otp` 서비스를 추가하고 `isochrone-network`에 연결하며, Nginx 서비스의 타겟으로 설정합니다. 모든 컨테이너가 `docker-compose up -d`로 정상 기동되고 서로 통신할 수 있는지 `docker logs`를 통해 확인합니다. `docker-compose down` 후 `docker-compose up`을 여러 번 반복하여 안정성을 테스트하고, Oracle Cloud ARM 환경에 맞는 CPU, 메모리 리소스 할당(`deploy.resources.limits`)을 `docker-compose.yml`에 설정합니다.",
+            "details": "`docker-compose up` 명령어를 사용하여 OTP 컨테이너를 실행합니다. 컨테이너 로그를 확인하여 JVM 관련 에러 없이 서버가 시작되는지 확인합니다. `curl http://localhost:8080/otp`를 호출하여 OTP 관련 응답(예: 404 Not Found, 라우터가 없다는 메시지)이 수신되는지 확인하여 서비스 기동을 검증합니다.",
             "status": "pending",
-            "testStrategy": "`docker build -f Dockerfile.otp -t korea-isochrone-otp .` 명령으로 Dockerfile이 정상적으로 빌드되는지 확인합니다. `docker-compose up -d`로 모든 서비스를 기동한 후 `docker ps`로 모든 컨테이너의 상태를 확인합니다. `docker logs`를 통해 각 컨테이너의 초기화 및 운영 로그를 모니터링하여 오류가 없는지 확인합니다. Nginx 프록시를 통해 OpenTripPlanner의 API 엔드포인트에 접근하여 정상 동작을 검증하고, `docker-compose down` 및 `docker-compose up` 반복 테스트로 환경의 안정성을 확인합니다."
+            "testStrategy": "`docker-compose ps` 명령으로 컨테이너가 'Up' 상태인지 확인하고, `curl -I http://localhost:8080/otp`를 통해 HTTP 응답 코드를 확인하여 서비스가 실행 중인지 검증합니다."
           }
         ]
       },
       {
         "id": 2,
-        "title": "한국 GTFS 및 OSM 데이터 수집 및 전처리 파이프라인 구축",
-        "description": "GTFS(국가교통DB)와 OpenStreetMap 데이터를 수집, 검증, 전처리하여 OTP 그래프 빌드에 적합한 형태로 변환합니다.",
-        "details": "GTFS zip 파일 및 OSM pbf 파일을 주기적으로 다운로드. GTFS timezone(Korea → Asia/Seoul) 변환, 결측치/오류 데이터 검증. Python 또는 Java로 데이터 검증 스크립트 작성. 데이터 저장 경로 및 버전 관리.",
-        "testStrategy": "샘플 GTFS/OSM 데이터로 파이프라인 실행 후, 결과 파일의 포맷 및 주요 필드 검증. 오류/결측치 자동 리포트 생성.",
+        "title": "한국 GTFS 및 OSM 데이터 수집 및 검증",
+        "description": "한국 대중교통 GTFS 데이터와 OpenStreetMap(OSM) 데이터를 수집하고, OTP에서 요구하는 포맷으로 검증합니다.",
+        "details": "GTFS 데이터는 국토교통부 또는 서울 열린데이터광장 등에서 최신 버전을 다운로드합니다. OSM 데이터는 Geofabrik 등에서 서울/한국 지역을 추출합니다. 데이터 무결성 및 포맷(경로, 정류장, 일정 등) 검증 스크립트 작성.",
+        "testStrategy": "GTFS 및 OSM 파일을 OTP에 로드하여 오류 메시지 없이 그래프 빌드가 가능한지 확인.",
         "priority": "high",
         "dependencies": [
           1
@@ -82,69 +80,66 @@
         "subtasks": [
           {
             "id": 1,
-            "title": "GTFS/OSM 원본 데이터 다운로드 모듈 개발",
-            "description": "국가교통DB(GTFS) ZIP 파일과 OpenStreetMap PBF 파일을 지정된 URL에서 주기적으로 다운로드하는 기능을 개발합니다. 기존 DataFetchService를 확장하여 구현합니다.",
+            "title": "한국 GTFS 데이터 소스 조사 및 다운로드",
+            "description": "최신 한국 대중교통 GTFS 데이터를 제공하는 공식 소스(예: 서울시 열린데이터광장, 국토교통부)를 조사하고, 최신 버전의 데이터를 다운로드합니다.",
             "dependencies": [],
-            "details": "기존 `com.example.korea.isochrone.service.DataFetchService`의 `downloadFile` 메서드를 활용하거나 확장하여 GTFS 및 OSM PBF 파일을 안전하게 임시 저장소에 다운로드하는 기능을 구현합니다. 다운로드 원본 URL은 `application.yml` 등 설정 파일에서 관리하도록 합니다. 다운로드 성공/실패 로깅을 포함합니다.",
+            "details": "서울시 열린데이터광장 또는 국가대중교통정보센터(TAGO) 포털을 방문하여 수도권 GTFS 데이터셋을 찾습니다. 다운로드 URL을 기록하고, `gtfs.zip` 파일을 로컬에 저장합니다.",
             "status": "pending",
-            "testStrategy": "가상의 GTFS/OSM 파일 다운로드 URL을 설정하고 모듈을 실행하여 파일이 지정된 로컬 경로에 성공적으로 다운로드되는지, 그리고 오류 발생 시 적절한 로깅이 이루어지는지 확인합니다."
+            "testStrategy": "다운로드한 zip 파일의 압축을 해제하여 'stops.txt', 'routes.txt', 'trips.txt' 등 필수 파일이 포함되어 있는지 확인합니다."
           },
           {
             "id": 2,
-            "title": "GTFS 데이터 파싱, 시간대 변환 및 유효성 검사 모듈 개발",
-            "description": "다운로드된 GTFS ZIP 파일을 파싱하고, 모든 시간대 정보를 'Asia/Seoul'로 변환하며, GTFS 스펙에 따른 필수 필드 결측치 및 데이터 일관성(예: stop_times, routes, trips)을 검사하는 모듈을 개발합니다.",
-            "dependencies": [
-              1
-            ],
-            "details": "GTFS ZIP 파일을 압축 해제하고 각 `.txt` 파일을 파싱하는 Java 유틸리티 클래스 또는 서비스를 개발합니다. `calendar.txt`, `stop_times.txt`, `trips.txt` 등의 시간대 데이터를 'Asia/Seoul'로 변환하는 로직을 포함합니다. 필수 필드 존재 여부, 참조 무결성(예: `stop_id`가 `stops.txt`에 있는지), 시간 순서 등의 유효성 검사 로직을 구현하고, 오류 발견 시 상세 로깅을 남깁니다.",
+            "title": "한국 지역 OSM 데이터 추출 및 다운로드",
+            "description": "OpenTripPlanner에 필요한 도로망 데이터를 위해 한국 지역의 OpenStreetMap(OSM) 데이터를 다운로드합니다.",
+            "dependencies": [],
+            "details": "Geofabrik (download.geofabrik.de)에서 한국(South Korea) 지역의 최신 OSM 데이터를 '.pbf' 형식으로 다운로드합니다. 파일 이름은 'korea-latest.osm.pbf'와 같은 명확한 이름으로 저장합니다.",
             "status": "pending",
-            "testStrategy": "다양한 유형의 샘플 GTFS 데이터(정상, 시간대 오류, 결측치 포함, 참조 무결성 위반)를 사용하여 모듈을 실행하고, 데이터가 올바르게 파싱 및 변환되는지, 그리고 유효성 검사가 정확하게 오류를 보고하는지 확인합니다."
+            "testStrategy": "다운로드한 '.pbf' 파일의 크기가 비정상적으로 작지 않은지 (최소 수백 MB 이상) 확인합니다."
           },
           {
             "id": 3,
-            "title": "OSM PBF 데이터 필터링 및 유효성 검사 모듈 개발",
-            "description": "다운로드된 OSM PBF 파일을 파싱하고, OTP 그래프 빌드에 필요한 도로망 및 POI(관심 지점) 데이터를 추출하며, 기본적인 데이터 유효성 검사를 수행하는 모듈을 개발합니다.",
+            "title": "OTP 프로젝트 데이터 디렉토리 구성",
+            "description": "다운로드한 GTFS 및 OSM 데이터를 OTP가 인식할 수 있는 프로젝트 내 특정 디렉토리에 배치합니다.",
             "dependencies": [
-              1
+              1,
+              2
             ],
-            "details": "OSM PBF 파일을 처리하기 위한 Java 라이브러리(예: osmosis, GraphHopper의 PBF 파서)를 사용하여 PBF 데이터를 로드합니다. OTP 그래프 빌드에 필수적인 도로망 정보(도로 유형, 속도 제한 등)와 지정된 POI 태그(예: 건물, 대중교통 관련 시설)를 추출하고 필터링하는 로직을 구현합니다. 추출된 데이터의 기본적인 공간 유효성 및 필수 속성 존재 여부를 검사합니다.",
+            "details": "프로젝트 루트의 'data' 디렉토리에 다운로드한 GTFS zip 파일과 OSM .pbf 파일을 이동시킵니다. 이 경로는 'docker-compose.yml'에 정의된 OTP 컨테이너의 볼륨 마운트 경로와 일치해야 합니다.",
             "status": "pending",
-            "testStrategy": "샘플 OSM PBF 파일로 모듈을 실행하여 OTP 빌드에 필요한 도로망 및 POI 데이터가 정확히 추출되고 필터링되는지 확인합니다. 특정 태그를 가진 노드/경로가 올바르게 처리되는지, 그리고 오류 데이터에 대한 유효성 검사 로직이 작동하는지 테스트합니다."
+            "testStrategy": "`ls -l data/` 명령어를 실행하여 GTFS와 OSM 파일이 모두 존재하는지 확인합니다."
           },
           {
             "id": 4,
-            "title": "OTP 그래프 빌드용 데이터 통합 및 저장 모듈 개발",
-            "description": "전처리된 GTFS 데이터와 OSM 데이터를 OTP(OpenTripPlanner)에서 그래프를 빌드하는 데 적합한 형태로 통합하고, 지정된 경로에 버전 관리와 함께 저장하는 모듈을 개발합니다.",
+            "title": "OTP를 이용한 데이터 유효성 검증 및 초기 그래프 빌드",
+            "description": "준비된 GTFS 및 OSM 데이터를 사용하여 OpenTripPlanner 서버를 실행하고, 데이터 로딩 및 그래프 빌드 과정에서 오류가 없는지 확인합니다.",
             "dependencies": [
-              2,
               3
             ],
-            "details": "전처리된 GTFS 파일들(.txt)과 OSM PBF 파일 또는 OSM XML 형태의 데이터를 OTP 빌더가 요구하는 특정 디렉토리 구조(예: `graph/gtfs`, `graph/osm.pbf`)로 복사하거나 생성합니다. 데이터 저장 경로에 날짜 또는 버전 태그를 포함하여 과거 데이터셋을 보존하고 관리할 수 있는 버전 관리 전략을 구현합니다. OTP 빌더 실행 시 필요한 설정 파일 생성 또는 업데이트 기능을 고려합니다.",
+            "details": "프로젝트 루트에서 `docker-compose up` 명령을 실행하여 OTP 컨테이너를 시작합니다. 컨테이너 로그를 실시간으로 모니터링하며 데이터 파싱 과정과 그래프 빌드 완료 메시지를 확인합니다.",
             "status": "pending",
-            "testStrategy": "전처리된 GTFS 및 OSM 데이터를 입력으로 사용하여 통합 모듈을 실행합니다. 결과물이 OTP 빌더가 인식할 수 있는 올바른 디렉토리 구조와 파일명으로 저장되는지 확인하고, 버전 태그가 올바르게 적용되는지 검증합니다. OTP 빌더로 수동 그래프 빌드를 시도하여 데이터 호환성을 확인합니다."
+            "testStrategy": "OTP 서버 로그에서 심각한(SEVERE) 오류나 예외 없이 'Grizzly server running' 및 그래프 빌드 관련 로그가 정상적으로 출력되는지 확인합니다."
           },
           {
             "id": 5,
-            "title": "GTFS/OSM 데이터 수집 및 전처리 파이프라인 자동화 스크립트 구축",
-            "description": "위에서 개발된 모듈들을 순차적으로 실행하여 GTFS 및 OSM 데이터의 다운로드, 전처리, 통합, 저장까지의 전 과정을 자동화하고, 주기적으로 실행되도록 스케줄링하는 파이프라인을 구축합니다.",
+            "title": "데이터 수집 자동화 쉘 스크립트 작성",
+            "description": "향후 데이터 업데이트를 용이하게 하기 위해, GTFS 및 OSM 데이터를 자동으로 다운로드하여 'data' 디렉토리에 배치하는 쉘 스크립트를 작성합니다.",
             "dependencies": [
               1,
               2,
-              3,
               4
             ],
-            "details": "스프링 스케줄러(`@Scheduled`) 또는 별도의 배치 잡 형태로 전체 파이프라인을 오케스트레이션하는 Java 애플리케이션을 개발합니다. 각 단계의 성공/실패 여부를 확인하고, 실패 시 적절한 재시도 로직 또는 알림(로깅, Sentry 연동 등) 기능을 포함합니다. 데이터 수집 주기를 설정하고(`application.yml`에서 관리), 파이프라인 실행 상태 및 결과에 대한 상세 로깅 시스템을 구축합니다.",
+            "details": "'scripts/download_data.sh' 파일을 생성합니다. `curl` 또는 `wget` 명령어를 사용하여 1, 2번 태스크에서 확정한 URL로부터 데이터를 다운로드하고 'data' 디렉토리에 저장합니다. 스크립트에 실행 권한(`chmod +x`)을 부여합니다.",
             "status": "pending",
-            "testStrategy": "파이프라인 자동화 스크립트를 수동으로 실행하여 모든 단계(다운로드, GTFS 파싱, OSM 파싱, 통합 및 저장)가 오류 없이 순차적으로 완료되는지 확인합니다. 스케줄링 설정 후 주기적으로 실행되는지, 그리고 각 단계에서 예상되는 오류 시나리오(예: 다운로드 실패, 데이터 유효성 검사 실패) 발생 시 로깅 및 알림 기능이 올바르게 작동하는지 테스트합니다."
+            "testStrategy": "기존 'data' 디렉토리를 비운 후 `./scripts/download_data.sh` 스크립트를 실행하여 GTFS 및 OSM 파일이 정상적으로 다운로드되는지 확인합니다."
           }
         ]
       },
       {
         "id": 3,
-        "title": "OpenTripPlanner 설치 및 그래프 빌드 자동화",
-        "description": "OpenTripPlanner 2.2+를 설치하고, 수집된 GTFS/OSM 데이터를 기반으로 RAPTOR 알고리즘 그래프를 빌드합니다.",
-        "details": "OTP jar 다운로드 및 Docker 컨테이너화. GTFS/OSM 데이터 경로 지정 후 그래프 빌드 스크립트 작성. 빌드 완료 후 그래프 캐시 저장. JVM 메모리 옵션(G1GC, 8-12GB) 적용.",
-        "testStrategy": "OTP 그래프 빌드 로그 및 결과 파일 검증. 샘플 경로 탐색 API 호출로 정상 동작 확인.",
+        "title": "OTP 그래프 빌드 및 데이터 통합 자동화",
+        "description": "수집한 GTFS/OSM 데이터를 기반으로 OTP 그래프 빌드 프로세스를 자동화합니다.",
+        "details": "Docker 컨테이너 내에서 GTFS/OSM 데이터를 지정 경로에 배치하고, OTP의 graph-builder 명령어를 통해 그래프를 생성하는 스크립트 작성. 빌드 결과물(graph.obj 등)을 서버 실행에 활용.",
+        "testStrategy": "그래프 빌드 완료 후, OTP 서버에서 경로 탐색 및 isochrone API 호출이 정상적으로 동작하는지 확인.",
         "priority": "high",
         "dependencies": [
           2
@@ -153,65 +148,65 @@
         "subtasks": [
           {
             "id": 1,
-            "title": "OpenTripPlanner 2.2+ Dockerfile 작성",
-            "description": "OpenTripPlanner 2.2+ JAR 파일을 다운로드하고, 이를 포함하는 Dockerfile을 작성하여 OTP 실행에 필요한 기본 환경을 설정합니다.",
+            "title": "GTFS/OSM 데이터 컨테이너 내 경로 설정 및 검증",
+            "description": "OTP 그래프 빌더가 GTFS 및 OSM 데이터를 읽을 수 있도록 Docker 컨테이너 내 파일 시스템 경로를 정의하고, Task 2에서 수집된 데이터가 해당 경로로 정상적으로 마운트/복사되는지 확인합니다. docker-compose.yml의 볼륨 설정을 검토하고 필요시 수정합니다.",
             "dependencies": [],
-            "details": "OpenTripPlanner 공식 GitHub 릴리즈 페이지 또는 Maven 중앙 저장소에서 OTP 2.2+ JAR 파일을 다운로드하여 Dockerfile 내에 포함합니다. Dockerfile은 Java 17을 기반으로 하며, OTP 실행을 위한 최소한의 환경을 구성합니다. (예: `FROM openjdk:17-jdk-slim`, `ADD otp-2.2.0.jar /opt/otp/otp.jar`)",
+            "details": "`docker-compose.yml`에서 OTP 컨테이너 내부에 `/otp/graphs/default/data/gtfs` 및 `/otp/graphs/default/data/osm`와 같은 경로에 호스트의 데이터 디렉토리를 마운트하도록 설정합니다. `docker exec` 명령어를 사용하여 컨테이너 내부에서 데이터 파일 접근 가능 여부를 확인합니다.",
             "status": "pending",
-            "testStrategy": "Dockerfile을 사용하여 OTP Docker 이미지를 성공적으로 빌드하고, `docker images` 명령어로 이미지 크기 및 태그를 확인합니다."
+            "testStrategy": "컨테이너가 실행 중인 상태에서 `docker exec <container_id> ls -l /otp/graphs/default/data/gtfs` 명령어를 실행하여 GTFS 파일 목록이 정상적으로 표시되는지 확인합니다."
           },
           {
             "id": 2,
-            "title": "Docker Compose에 OTP 서비스 및 JVM 설정 추가",
-            "description": "`docker-compose.yml` 파일에 OpenTripPlanner 서비스를 정의하고, GTFS/OSM 데이터 경로 볼륨 마운트 및 JVM 메모리 옵션(G1GC, 8-12GB)을 설정합니다.",
+            "title": "OTP 그래프 빌드 쉘 스크립트 개발",
+            "description": "OTP의 graph-builder 기능을 활용하여 GTFS 및 OSM 데이터를 기반으로 교통 그래프를 빌드하는 쉘 스크립트(예: `build_graph.sh`)를 작성합니다. 이 스크립트는 OTP 실행 환경 설정 및 빌드 명령어를 포함해야 합니다.",
             "dependencies": [
               1
             ],
-            "details": "`docker-compose.yml`에 OTP 컨테이너를 위한 서비스를 추가합니다. Subtask 1에서 빌드된 Docker 이미지를 사용하도록 `image` 또는 `build` 옵션을 설정합니다. GTFS/OSM 데이터가 위치할 로컬 디렉토리를 컨테이너 내부 경로로 마운트하도록 `volumes` 섹션을 구성합니다. `environment` 변수를 통해 `JAVA_OPTS: -Xmx12G -Xms8G -XX:+UseG1GC`와 같은 JVM 옵션을 설정합니다.",
+            "details": "`otp-2.2.0-shaded.jar` 파일을 실행하며 `build --basePath /otp --router default --graphPath /otp/graphs/default/ --in/gtfs /otp/graphs/default/data/gtfs --in/osm /otp/graphs/default/data/osm`와 유사한 명령어를 사용합니다. 빌드 중 메모리 부족을 방지하기 위해 `JAVA_OPTS` 환경변수에 `\"-Xmx4G\"` 등을 설정하여 스크립트에 포함합니다.",
             "status": "pending",
-            "testStrategy": "`docker-compose up -d otp_service` 명령어를 실행하여 OTP 컨테이너가 지정된 JVM 옵션으로 성공적으로 기동되는지 확인하고, `docker logs`로 초기 로그를 검토합니다."
+            "testStrategy": "작성된 스크립트를 수동으로 실행하여 그래프 빌드가 성공적으로 완료되고, 지정된 출력 경로(예: `/otp/graphs/default/`)에 `graph.obj` 파일이 생성되는지 확인합니다. 빌드 로그에 에러가 없는지 검토합니다."
           },
           {
             "id": 3,
-            "title": "OpenTripPlanner 그래프 빌드 스크립트 개발",
-            "description": "수집된 GTFS 및 OSM 데이터를 OpenTripPlanner의 요구사항에 맞게 처리하고, 이를 사용하여 OTP 그래프를 빌드하는 쉘 또는 Python 스크립트를 작성합니다.",
+            "title": "Docker Compose 그래프 빌드 서비스 통합",
+            "description": "작성된 그래프 빌드 쉘 스크립트를 실행하는 별도의 Docker Compose 서비스를 `docker-compose.yml`에 추가합니다. 이 서비스는 GTFS/OSM 데이터 볼륨과 빌드 결과물 저장용 볼륨에 접근할 수 있도록 설정해야 합니다.",
             "dependencies": [
               2
             ],
-            "details": "스크립트는 `java -Xmx... -jar /opt/otp/otp.jar --build --load /data/otp --graphs /data/graphs`와 같은 명령어를 사용하여 OTP 그래프 빌드를 수행합니다. OTP 컨테이너 내부에서 실행 가능하도록 구현하며, GTFS 및 OSM 데이터 파일 경로를 스크립트 인자로 받거나 환경 변수에서 읽어오도록 합니다. 빌드 프로세스 중 발생하는 로그를 상세히 기록합니다.",
+            "details": "`docker-compose.yml`에 `graph-builder` 또는 `otp-builder`라는 이름의 서비스를 추가하고, `command` 필드에 `build_graph.sh` 스크립트 실행 명령어를 지정합니다. `volumes` 설정을 통해 GTFS/OSM 데이터 볼륨과 빌드된 `graph.obj` 파일이 저장될 영구 볼륨을 공유하도록 구성합니다.",
             "status": "pending",
-            "testStrategy": "준비된 샘플 GTFS/OSM 데이터를 사용하여 스크립트를 실행하고, 그래프 빌드가 성공적으로 완료되는지, 지정된 경로에 그래프 파일이 생성되는지 확인합니다. 빌드 로그에서 오류가 없는지 검토합니다."
+            "testStrategy": "`docker-compose up otp-builder` 명령어를 실행하여 빌드 서비스가 성공적으로 그래프를 생성하고 종료되는지 확인합니다. 이후 해당 볼륨 마운트 경로에 `graph.obj` 파일이 정상적으로 생성 및 저장되었는지 확인합니다."
           },
           {
             "id": 4,
-            "title": "빌드된 OpenTripPlanner 그래프 캐싱 및 자동화 설정",
-            "description": "OpenTripPlanner 그래프 빌드가 완료된 후, 빌드된 그래프를 영구적으로 저장(캐싱)하고, 향후 데이터 업데이트 시 자동으로 그래프를 재빌드하도록 자동화 프로세스를 구축합니다.",
+            "title": "OTP 서버용 빌드된 그래프 로드 설정",
+            "description": "Docker Compose 내 OTP 서버 서비스가 이전에 `graph-builder` 서비스에 의해 생성된 `graph.obj` 파일을 자동으로 로드하도록 설정합니다. OTP 서버의 설정 파일을 업데이트하거나 서버 시작 명령을 조정하여 그래프 파일 경로를 지정합니다.",
             "dependencies": [
               3
             ],
-            "details": "`docker-compose.yml`에 OTP 그래프가 저장될 볼륨을 영구 볼륨으로 설정하여 컨테이너 재시작 시에도 데이터가 유지되도록 합니다. 그래프 빌드 스크립트를 주기적으로 실행하거나, GTFS/OSM 데이터 업데이트 시 트리거될 수 있도록 Crontab, Jenkins 또는 별도의 쉘 스크립트로 자동화 로직을 구현합니다. 빌드된 그래프의 버전 관리 방안을 고려합니다.",
+            "details": "OTP 서버 서비스의 `command` 또는 환경변수를 통해 `graph.obj` 파일이 위치한 경로(예: `/otp/graphs/default/graph.obj`)를 지정하여 서버 시작 시 로드되도록 합니다. `router-config.json`에 `graphPath`를 설정하거나, OTP 서버 시작 명령에 `--graph /path/to/graph.obj` 옵션을 추가합니다.",
             "status": "pending",
-            "testStrategy": "`docker-compose down` 후 `docker-compose up`을 통해 컨테이너를 재시작하고, 이전에 빌드된 그래프가 유효한지 확인합니다. 자동화 스케줄을 설정하고, 실제 데이터 업데이트 상황을 가정하여 재빌드가 정상적으로 수행되는지 모니터링합니다."
+            "testStrategy": "`docker-compose up otp-server` (또는 전체 `docker-compose up`) 실행 후, OTP 서버 컨테이너의 로그에서 `graph.obj` 파일 로딩 관련 메시지(예: \"Graph loaded successfully\")를 확인하여 그래프 로드 성공 여부를 검증합니다."
           },
           {
             "id": 5,
-            "title": "OpenTripPlanner 그래프 빌드 유효성 검증 및 API 연동 테스트",
-            "description": "빌드된 OTP 그래프가 정상적으로 로드되고 작동하는지 확인하기 위해 로그를 검토하고, OTP의 경로 탐색 API(router API)를 사용하여 샘플 경로를 조회하여 결과를 검증합니다.",
+            "title": "전체 빌드 및 서버 실행 워크플로우 자동화 검증",
+            "description": "데이터 준비부터 그래프 빌드, 그리고 빌드된 그래프를 사용하는 OTP 서버 실행까지의 전체 자동화 워크플로우를 엔드투엔드로 검증합니다. 모든 과정이 스크립트와 Docker Compose만으로 자동 실행되고 성공적으로 완료되는지 확인합니다.",
             "dependencies": [
               4
             ],
-            "details": "OTP 컨테이너 시작 시 로그에서 \"Graph loaded successfully\" 메시지를 확인합니다. `curl` 또는 간단한 클라이언트 코드를 사용하여 `http://localhost:8080/otp/routers/default/plan?fromPlace=37.5665,126.9780&toPlace=37.5796,126.9770&mode=WALK,TRANSIT`와 같은 경로 탐색 API를 호출합니다. 응답으로 유효한 경로 정보가 반환되는지, 시간과 거리가 합리적인지 확인합니다.",
+            "details": "`docker-compose down -v` 명령어로 모든 볼륨을 제거한 후, `docker-compose up --build -d` 명령어를 통해 모든 과정을 초기부터 실행합니다. OTP 서버가 완전히 기동된 후, `/otp/routers/default/health` 엔드포인트에 접속하여 상태를 확인하고, 간단한 경로 탐색 (예: `http://localhost:8080/otp/routers/default/plan?fromPlace=37.5,127.0&toPlace=37.6,127.1`) 또는 isochrone API를 호출하여 그래프가 정상 작동하는지 확인합니다.",
             "status": "pending",
-            "testStrategy": "샘플 출발지/도착지 및 시간으로 OTP 경로 탐색 API를 여러 차례 호출하여 응답 시간과 결과의 정확성을 검증합니다. 다양한 교통수단(대중교통, 도보) 조합으로 테스트하여 RAPTOR 알고리즘이 올바르게 적용되었는지 확인합니다."
+            "testStrategy": "OTP 서버의 health check 엔드포인트가 `{\"status\":\"OK\"}`를 반환하는지 확인하고, 실제 경로 탐색 API 호출이 유효한 계획 응답(예: 경로 정보, 시간 등)을 반환하는지 검증합니다. 빌드 및 서버 기동 과정에서 발생하는 모든 로그를 검토하여 에러가 없는지 확인합니다."
           }
         ]
       },
       {
         "id": 4,
-        "title": "Spring Boot 기반 Isochrone REST API 서버 개발",
-        "description": "OTP 엔진과 연동하여 isochrone 계산 및 결과 반환하는 REST API 서버를 Spring Boot로 구현합니다.",
-        "details": "Spring Boot 3.x 프로젝트 생성. POST /api/v1/isochrone, GET /api/v1/isochrone/{id} 엔드포인트 구현. OTP 엔진과 gRPC/HTTP 연동. 입력 파라미터 검증 및 예외 처리. API Key 인증 및 Rate Limiting 적용.",
-        "testStrategy": "Swagger/OpenAPI 문서 자동 생성. 단위 테스트(JUnit) 및 통합 테스트로 각 엔드포인트 검증. 인증/Rate Limiting 시나리오 테스트.",
+        "title": "Isochrone REST API 엔드포인트 구현",
+        "description": "OTP 내장 REST API(/otp/routers/default/isochrone) 엔드포인트를 외부에서 호출할 수 있도록 설정 및 문서화합니다.",
+        "details": "OTP의 isochrone API 엔드포인트를 활성화하고, 필요한 쿼리 파라미터(fromPlace, cutoffSec, mode 등)를 명확히 문서화합니다. Docker 네트워크 및 포트 설정을 통해 외부 접근 허용.",
+        "testStrategy": "curl 또는 Postman으로 /isochrone 엔드포인트에 요청하여 GeoJSON Polygon 응답이 정상적으로 반환되는지 확인.",
         "priority": "high",
         "dependencies": [
           3
@@ -220,67 +215,67 @@
         "subtasks": [
           {
             "id": 1,
-            "title": "Spring Boot 프로젝트 초기 설정 및 API 모델 정의",
-            "description": "Spring Boot 3.x 프로젝트를 생성하고, Isochrone 요청 및 응답에 필요한 데이터 모델을 정의하며, 기본 컨트롤러 구조를 설정합니다.",
+            "title": "docker-compose.yml OTP 서비스 포트(8080) 노출 설정",
+            "description": "docker-compose.yml 파일에서 주석 처리된 'ports' 설정을 활성화하여 OTP 컨테이너의 8080 포트를 호스트 머신에 바인딩합니다. 이를 통해 외부에서 OTP API에 접근할 수 있는 기본 통로를 마련합니다.",
             "dependencies": [],
-            "details": "Maven/Gradle을 사용하여 Spring Boot 3.x 기반 프로젝트를 초기화합니다. Isochrone 계산을 위한 요청(예: `IsochroneRequest` DTO)과 결과(예: `IsochroneResponse` DTO)를 담을 데이터 모델 클래스들을 정의합니다. `/api/v1/isochrone` 경로의 기본 `RestController` 인터페이스 및 스텁 메소드를 정의하고, 필요한 `spring-boot-starter-web` 및 `spring-boot-starter-validation` 의존성을 추가합니다.",
+            "details": "docker-compose.yml 파일의 otp 서비스 정의에서 'ports: - \"8080:8080\"' 라인의 주석을 제거하고 'docker-compose up -d --build' 명령어로 서비스를 재시작합니다.",
             "status": "pending",
-            "testStrategy": null
+            "testStrategy": "`docker ps` 명령어를 실행하여 otp 컨테이너의 PORTS 항목에 '0.0.0.0:8080->8080/tcp'와 같이 포트 포워딩이 정상적으로 설정되었는지 확인합니다."
           },
           {
             "id": 2,
-            "title": "OTP 엔진 연동 클라이언트 및 Isochrone 핵심 서비스 로직 구현",
-            "description": "OTP(OpenTripPlanner) 엔진과의 통신을 담당하는 클라이언트를 구현하고, 이 클라이언트를 사용하여 Isochrone 계산을 요청하고 응답을 처리하는 핵심 서비스 로직을 개발합니다.",
+            "title": "Docker 컨테이너 내부에서 Isochrone API 동작 검증",
+            "description": "`docker exec`를 사용하여 실행 중인 OTP 컨테이너에 접속한 후, `curl` 명령어로 `localhost:8080`의 isochrone 엔드포인트가 정상적으로 응답하는지 확인합니다. 이는 네트워크 문제가 아닌 OTP 애플리케이션 자체의 동작을 검증하기 위함입니다.",
             "dependencies": [
               1
             ],
-            "details": "OTP 엔진의 Isochrone API와 연동하기 위한 gRPC 또는 HTTP 클라이언트(예: `WebClient` 또는 Feign Client)를 구현합니다. 클라이언트를 통해 OTP에 Isochrone 계산을 요청하고, OTP로부터 받은 응답 데이터를 파싱하여 Subtask 1에서 정의한 `IsochroneResponse` 모델로 변환하는 로직을 `IsochroneService` 클래스 내에 구현합니다. OTP 연결 설정 정보(URL, 포트 등)는 `application.yml` 또는 `application.properties`를 통해 외부에서 주입받도록 구성합니다.",
+            "details": "`docker exec -it <otp_container_name> /bin/bash` 명령어로 컨테이너에 접속한 후, `curl \"http://localhost:8080/otp/routers/default/isochrone?fromPlace=37.5665,126.9780&mode=WALK&cutoffSec=600\"` 와 같은 명령어로 API 응답을 확인합니다.",
             "status": "pending",
-            "testStrategy": "OTP Mock 서버를 구축하거나 Mockito를 사용하여 OTP 클라이언트를 Mocking하여, 서비스 계층의 OTP 연동 로직 및 데이터 변환이 올바르게 동작하는지 단위 테스트(JUnit)를 작성하고 검증합니다."
+            "testStrategy": "curl 요청 시 HTTP 200 OK 상태 코드와 함께 GeoJSON 형식의 응답 본문(geometry type: Polygon)이 반환되는지 확인합니다."
           },
           {
             "id": 3,
-            "title": "Isochrone REST API 엔드포인트 및 입력 유효성 검사 구현",
-            "description": "`POST /api/v1/isochrone` (Isochrone 계산 요청) 및 `GET /api/v1/isochrone/{id}` (계산된 Isochrone 결과 조회) 엔드포인트를 구현하고, 요청 파라미터에 대한 강력한 유효성 검사 및 전역 예외 처리 로직을 적용합니다.",
+            "title": "Nginx 리버스 프록시를 이용한 API 엔드포인트 구성",
+            "description": "외부 요청(`/api/isochrone`)을 내부 OTP 서비스(`/otp/routers/default/isochrone`)로 전달하는 Nginx 리버스 프록시를 설정합니다. 이를 위해 `docker-compose.yml`에 Nginx 서비스를 추가하고 관련 설정 파일을 작성합니다.",
             "dependencies": [
-              1,
-              2
+              1
             ],
-            "details": "`IsochroneController` 내에 `POST /api/v1/isochrone` (요청 본문으로 `IsochroneRequest`를 수신하고 `IsochroneService`를 호출) 및 `GET /api/v1/isochrone/{id}` (경로 변수 `id`를 통해 계산된 결과 조회, 임시 저장소 또는 DB 활용) 메소드를 구현합니다. `@Valid` 어노테이션과 `@NotNull`, `@Min`, `@Max`, `@Pattern` 등의 Bean Validation을 사용하여 입력 값의 유효성을 검증합니다. `@ControllerAdvice`와 `@ExceptionHandler`를 활용한 전역 예외 처리 핸들러를 구현하여 일관된 오류 응답 형식을 제공합니다.",
+            "details": "`nginx/default.conf` 파일을 생성하고 `location /api/isochrone { ... }` 블록 내에 `proxy_pass http://otp:8080/otp/routers/default/isochrone;` 설정을 추가합니다. `docker-compose.yml`에 nginx 서비스를 정의하고 호스트의 80 포트와 연결합니다.",
             "status": "pending",
-            "testStrategy": "Postman, curl 또는 REST Assured를 사용하여 `POST` 및 `GET` 엔드포인트의 동작을 확인합니다. 유효하거나 유효하지 않은 입력 값으로 요청을 보내어 유효성 검사 및 예외 처리 로직이 예상대로 동작하는지 통합 테스트를 통해 검증합니다."
+            "testStrategy": "Nginx 컨테이너 로그를 확인하여 `/api/isochrone` 요청이 `http://otp:8080/...`으로 정상적으로 프록시 패스되는지 검증합니다."
           },
           {
             "id": 4,
-            "title": "API Key 기반 인증 및 Rate Limiting 기능 추가",
-            "description": "외부 서비스 호출에 대한 보안을 강화하기 위해 API Key 인증 메커니즘을 구현하고, 서비스 과부하를 방지하기 위한 Rate Limiting 기능을 적용합니다.",
+            "title": "Isochrone API 명세서 작성 (요청 파라미터 및 응답)",
+            "description": "API 사용에 필요한 필수 및 선택 쿼리 파라미터(fromPlace, cutoffSec, mode, date, time 등)를 정의하고, 각 파라미터의 형식과 예시를 포함한 문서를 작성합니다. 또한, 성공 시 반환되는 GeoJSON 응답의 구조를 설명합니다.",
             "dependencies": [
-              3
+              2
             ],
-            "details": "Spring Security를 활용하여 `X-API-KEY` 헤더를 통해 API 키를 검증하는 커스텀 `OncePerRequestFilter`를 구현하고 보안 체인에 등록합니다. Redis나 Guava Cache 등을 기반으로 IP 주소 또는 API Key별 요청 수를 제한하는 Rate Limiting 로직을 AOP(Aspect-Oriented Programming) 또는 서블릿 필터 형태로 구현합니다. 인증 및 Rate Limiting 실패 시 적절한 HTTP 상태 코드(예: 401 Unauthorized, 429 Too Many Requests)를 반환하도록 처리합니다.",
+            "details": "README.md 파일에 'API Usage' 섹션을 추가하여 엔드포인트 URL, HTTP 메서드, 각 쿼리 파라미터의 설명, 데이터 타입, 필수 여부를 표 형식으로 정리합니다. Postman 또는 curl을 사용한 요청 예시와 샘플 응답 GeoJSON을 포함합니다.",
             "status": "pending",
-            "testStrategy": "유효한 API Key 및 유효하지 않은 API Key로 `POST /api/v1/isochrone` 엔드포인트에 요청을 보내어 인증 성공/실패를 확인합니다. Rate Limiting 임계값을 초과하는 연속 요청을 보내어 429 응답이 올바르게 반환되는지 통합 테스트로 검증합니다."
+            "testStrategy": "작성된 문서의 샘플 요청(curl)을 복사하여 터미널에서 실행했을 때, 문서에 명시된 샘플 응답과 동일한 구조의 결과가 반환되는지 확인합니다."
           },
           {
             "id": 5,
-            "title": "Springdoc OpenAPI 연동 및 API 문서 자동 생성",
-            "description": "API 명세를 자동으로 생성하고 시각화하여 개발자 및 사용자에게 제공할 수 있도록 Springdoc OpenAPI를 Spring Boot 프로젝트에 통합합니다.",
+            "title": "외부에서 Nginx를 통한 End-to-End Isochrone API 호출 테스트",
+            "description": "호스트 머신이나 Postman과 같은 외부 클라이언트에서 Nginx가 노출하는 엔드포인트(예: `http://localhost/api/isochrone`)를 호출하여 전체 API 요청-응답 흐름이 정상적으로 동작하는지 최종 검증합니다.",
             "dependencies": [
-              3
+              3,
+              4
             ],
-            "details": "`springdoc-openapi-starter-webmvc-ui` 의존성을 `pom.xml` 또는 `build.gradle`에 추가합니다. `Controller` 클래스와 메소드에 `@Tag`, `@Operation`, `@ApiResponse`, `@SecurityScheme`, `@SecurityRequirement` 등의 어노테이션을 사용하여 API의 상세 설명, 요청/응답 형식, 보안 설정 등을 문서화합니다. Springdoc 설정을 통해 API 문서의 제목, 버전, 라이선스 정보 등을 정의하여 `/swagger-ui.html`에서 접근 가능한 API 문서를 자동 생성합니다.",
+            "details": "Postman 또는 curl을 사용하여 `http://localhost/api/isochrone?fromPlace=37.5665,126.9780&mode=TRANSIT&cutoffSec=1800` 와 같은 실제 사용 예시 요청을 보내고, 유효한 GeoJSON 폴리곤이 반환되는지 확인합니다.",
             "status": "pending",
-            "testStrategy": "애플리케이션을 실행한 후 웹 브라우저에서 `/swagger-ui.html` 경로로 접속하여 생성된 API 문서가 정확하고 완전하게 표시되는지 시각적으로 검증합니다. 정의된 모든 엔드포인트와 모델, 보안 설정이 문서에 반영되었는지 확인합니다."
+            "testStrategy": "다양한 `cutoffSec` 및 `mode` 파라미터 값으로 API를 요청하고, 예상되는 구조의 GeoJSON 응답이 정상적으로 수신되는지 확인합니다. 또한, 잘못된 파라미터로 요청 시 적절한 HTTP 오류 코드가 반환되는지 확인합니다."
           }
         ]
       },
       {
         "id": 5,
-        "title": "React.js 기반 지도 시각화 프론트엔드 개발",
-        "description": "Leaflet/MapboxGL을 활용하여 isochrone 결과를 지도에 시각화하는 SPA 프론트엔드를 구현합니다.",
-        "details": "React 18 + TypeScript 프로젝트 생성. 지도 컴포넌트(Leaflet/MapboxGL) 구현. 폴리곤(GeoJSON) 시각화, 색상 그라데이션, 시작점 선택 UI, 시간대 선택 UI, 로딩 인디케이터, 결과 저장/공유 기능 추가.",
-        "testStrategy": "Jest/React Testing Library로 UI 컴포넌트 단위 테스트. 실제 API 연동 후 지도 결과 검증. 반응형 디자인 및 모바일/데스크톱 호환성 테스트.",
-        "priority": "high",
+        "title": "API 파라미터 검증 및 입력 유효성 처리",
+        "description": "API 요청 시 입력되는 파라미터(좌표, 시간, 이동수단 등)의 유효성 검증 로직을 구현합니다.",
+        "details": "REST API 호출 시 필수 파라미터 누락, 범위 오류, 지원하지 않는 이동수단 등 예외 처리. 잘못된 입력에 대해 명확한 에러 메시지 반환.",
+        "testStrategy": "유효하지 않은 파라미터로 API 호출 시 적절한 에러 코드 및 메시지가 반환되는지 테스트.",
+        "priority": "medium",
         "dependencies": [
           4
         ],
@@ -288,66 +283,66 @@
         "subtasks": [
           {
             "id": 1,
-            "title": "프론트엔드 초기 환경 설정 및 기본 레이아웃 구성",
-            "description": "React 18 + TypeScript 프로젝트의 기본 환경을 확인하고, 필요한 라이브러리(라우터, 상태 관리 등)를 설정하며, 애플리케이션의 기본 페이지 레이아웃을 구성합니다.",
+            "title": "Isochrone 요청 파라미터를 위한 DTO(Data Transfer Object) 생성",
+            "description": "API 요청 파라미터(fromPlace, cutoffSec, mode 등)를 개별 `@RequestParam` 대신 하나의 DTO 객체로 묶어 관리합니다. 이를 통해 향후 유효성 검증 및 파라미터 확장이 용이해집니다.",
             "dependencies": [],
-            "details": "`react-router-dom`을 설치하여 페이지 라우팅을 설정하고, `zustand` 또는 `react-query` 같은 상태 관리 라이브러리를 도입합니다. 헤더, 푸터, 메인 콘텐츠 영역을 포함하는 기본적인 애플리케이션 레이아웃 컴포넌트를 개발합니다.",
+            "details": "`IsochroneRequestDto.java` 클래스를 생성하고 `fromPlace`, `cutoffSec`, `mode` 등의 필드를 정의합니다. 기존 `IsochroneController`의 API 메소드 시그니처를 `@RequestBody IsochroneRequestDto`를 인자로 받도록 수정합니다.",
             "status": "pending",
-            "testStrategy": "Jest/React Testing Library를 사용하여 라우터 설정 및 기본 레이아웃 컴포넌트의 렌더링을 테스트합니다."
+            "testStrategy": "정상적인 파라미터를 담은 JSON 본문으로 API 요청 시, DTO 객체가 올바르게 매핑되어 기존과 동일하게 성공 응답이 반환되는지 확인합니다."
           },
           {
             "id": 2,
-            "title": "Leaflet 기반 지도 컴포넌트 구현 및 초기화",
-            "description": "`react-leaflet` 라이브러리를 사용하여 지도 컴포넌트를 개발하고, 초기 중심 좌표, 줌 레벨, 타일 레이어 등을 설정하여 지도 표시를 완료합니다.",
+            "title": "DTO 필드에 기본 유효성 검증 어노테이션 추가",
+            "description": "`spring-boot-starter-validation` 의존성을 추가하고, DTO의 각 필드에 JSR-380 표준 어노테이션을 사용하여 필수값, 빈 값 여부 등 기본적인 제약 조건을 설정합니다.",
             "dependencies": [
               1
             ],
-            "details": "`leaflet` 및 `react-leaflet` 패키지를 설치합니다. `MapContainer`, `TileLayer` 컴포넌트를 활용하여 지도 컴포넌트(`MapComponent.tsx`)를 생성하고, 기본 지도 스타일(예: OpenStreetMap 타일)을 적용합니다. 초기 로드 시 지도의 중심 좌표와 줌 레벨을 설정합니다.",
+            "details": "`build.gradle` 또는 `pom.xml`에 `spring-boot-starter-validation` 의존성을 추가합니다. `IsochroneRequestDto`의 `fromPlace`, `mode` 필드에 `@NotBlank`, `cutoffSec` 필드에 `@NotEmpty` 어노테이션을 추가하고, 컨트롤러 메소드의 DTO 파라미터에 `@Valid` 어노테이션을 추가하여 검증을 활성화합니다.",
             "status": "pending",
-            "testStrategy": "React Testing Library로 `MapComponent`가 오류 없이 렌더링되는지 확인하고, 개발자 도구를 통해 Leaflet 지도가 정상적으로 초기화되었는지 시각적으로 검증합니다."
+            "testStrategy": "필수 파라미터(예: fromPlace)를 누락시키거나 빈 문자열로 요청했을 때, HTTP 400 Bad Request 상태 코드와 함께 오류 응답이 반환되는지 테스트합니다."
           },
           {
             "id": 3,
-            "title": "Isochrone 시작점 선택 UI 및 백엔드 API 연동 로직 구현",
-            "description": "사용자가 지도 위에서 Isochrone 계산의 시작점을 선택할 수 있는 UI를 구현하고, 선택된 좌표를 기반으로 백엔드(Task 4) Isochrone API를 호출하는 로직을 개발합니다.",
+            "title": "전역 예외 처리 핸들러 구현",
+            "description": "유효성 검증 실패 시 발생하는 `MethodArgumentNotValidException`을 처리하기 위한 전역 예외 핸들러를 구현합니다. 이를 통해 모든 API에서 일관된 형식의 에러 메시지를 반환할 수 있습니다.",
             "dependencies": [
               2
             ],
-            "details": "지도 클릭 이벤트를 감지하여 마커를 표시하는 기능을 `MapComponent`에 추가합니다. `axios` 또는 `fetch`를 사용하여 `Task 4: Spring Boot 기반 Isochrone REST API 서버 개발`에서 제공하는 `/api/v1/isochrone` 엔드포인트에 POST 요청을 보내는 클라이언트 로직을 구현합니다. API 호출 중에는 로딩 인디케이터를 표시합니다.",
+            "details": "`@ControllerAdvice` 어노테이션을 사용한 `GlobalExceptionHandler` 클래스를 생성합니다. `@ExceptionHandler(MethodArgumentNotValidException.class)` 메소드를 정의하여, 예외 객체에서 오류 정보를 추출하고 표준화된 에러 응답 DTO(예: `ErrorResponse`)에 담아 반환하도록 구현합니다. 응답 형식에는 상태 코드, 에러 메시지, 상세 필드 오류 목록이 포함되어야 합니다.",
             "status": "pending",
-            "testStrategy": "Jest/React Testing Library를 사용하여 지도 클릭 시 마커가 올바르게 추가되는지 테스트합니다. Mocking을 통해 API 호출 로직이 올바른 파라미터로 실행되고 로딩 인디케이터가 표시되는지 확인합니다."
+            "testStrategy": "2번 테스트 케이스(필수 파라미터 누락) 실행 시, 응답 본문이 여기서 정의한 표준 에러 형식(예: `{\"status\": 400, \"message\": \"입력값이 올바르지 않습니다.\", \"errors\": [{\"field\": \"fromPlace\", \"reason\": \"반드시 값이 있어야 합니다.\"}]}`)에 맞게 반환되는지 확인합니다."
           },
           {
             "id": 4,
-            "title": "Isochrone 결과(GeoJSON) 시각화 및 색상 그라데이션 적용",
-            "description": "백엔드 API로부터 응답받은 GeoJSON 형식의 Isochrone 폴리곤 데이터를 지도에 시각화하고, 각 시간대별 폴리곤에 색상 그라데이션을 적용하여 가시성을 높입니다.",
+            "title": "좌표 형식 및 이동수단 검증을 위한 커스텀 Validator 구현",
+            "description": "`fromPlace` 파라미터가 \"위도,경도\" 형식인지, `mode` 파라미터가 지원되는 이동수단(예: WALK, TRANSIT) 중 하나인지 검증하는 커스텀 유효성 검증 로직을 구현합니다.",
             "dependencies": [
-              3
+              2
             ],
-            "details": "API 응답에서 GeoJSON 데이터를 파싱하고, `react-leaflet`의 `GeoJSON` 컴포넌트를 사용하여 지도에 폴리곤을 렌더링합니다. Isochrone 결과의 `properties`에 포함된 시간 값(예: `time_limit`)을 기반으로 폴리곤의 `fillColor`를 동적으로 설정하는 색상 그라데이션 로직(예: D3-scale)을 구현합니다.",
+            "details": "좌표 형식 검증을 위해 `@Coordinate` 커스텀 어노테이션과 `CoordinateValidator` 클래스를 구현합니다. Validator 내에서 정규식을 사용하여 \"숫자,숫자\" 형식을 확인합니다. 이동수단은 `String` 타입 대신 `TransportMode` enum 타입을 사용하도록 DTO를 변경하여, 허용되지 않은 문자열이 입력될 경우 Jackson 레벨에서 `InvalidFormatException`이 발생하도록 유도합니다.",
             "status": "pending",
-            "testStrategy": "Mock GeoJSON 데이터를 사용하여 `GeoJSON` 컴포넌트가 올바르게 렌더링되고, 시간 값에 따라 색상 그라데이션이 정확하게 적용되는지 시각적으로 검증 및 스냅샷 테스트를 수행합니다."
+            "testStrategy": "잘못된 좌표 형식(예: \"37.5, 127.0, 1.0\" 또는 \"서울\")이나 지원되지 않는 이동수단(예: \"CAR\")으로 요청 시, HTTP 400 에러와 함께 명확한 오류 메시지가 반환되는지 테스트합니다."
           },
           {
             "id": 5,
-            "title": "시간대 선택 UI 및 결과 저장/공유 기능 구현",
-            "description": "사용자가 Isochrone 계산에 사용할 여러 시간대(예: 10분, 20분, 30분)를 선택할 수 있는 UI를 구현하고, 현재 시각화된 Isochrone 결과를 저장하거나 공유할 수 있는 기능을 추가합니다.",
+            "title": "좌표 및 시간 값의 논리적 범위 검증 추가",
+            "description": "입력된 좌표 값이 실제 대한민국 영토 내에 위치하는지, 그리고 등시선 계산 시간(`cutoffSec`)이 시스템에서 허용하는 합리적인 범위 내에 있는지 검증합니다.",
             "dependencies": [
               4
             ],
-            "details": "슬라이더, 드롭다운 또는 체크박스 형태의 UI 컴포넌트를 개발하여 사용자가 여러 시간대 값을 입력하거나 선택하도록 합니다. 선택된 시간대가 API 요청 파라미터에 반영되도록 로직을 연결합니다. 현재 지도의 상태(중심 좌표, 줌 레벨, 선택된 시작점, 시간대)를 URL 쿼리 파라미터로 인코딩하여 공유 가능한 링크를 생성하는 기능을 구현합니다.",
+            "details": "`CoordinateValidator`에 대한민국 위경도 범위(대략 위도 33~39, 경도 124~132)를 체크하는 로직을 추가합니다. `IsochroneRequestDto`의 `cutoffSec` 필드의 각 원소에 `@Min(60)`(최소 1분), `@Max(10800)`(최대 3시간) 등의 어노테이션을 추가하여 입력 가능한 시간 범위를 제한합니다.",
             "status": "pending",
-            "testStrategy": "UI 컴포넌트의 상호작용 및 상태 변경을 Jest/React Testing Library로 테스트합니다. 공유 URL 생성 로직이 정확한 파라미터를 포함하는지 단위 테스트를 통해 검증합니다."
+            "testStrategy": "대한민국 범위를 벗어나는 좌표(예: \"0.0,0.0\")나 허용 범위를 벗어나는 시간(예: 30초 또는 4시간)으로 요청 시, HTTP 400 에러와 \"유효한 범위를 벗어났습니다.\"와 같은 구체적인 오류 메시지가 반환되는지 확인합니다."
           }
         ]
       },
       {
         "id": 6,
-        "title": "Redis 기반 Isochrone 결과 캐싱 및 격자 사전 계산 시스템 구현",
-        "description": "자주 요청되는 지점의 isochrone 결과를 Redis에 캐싱하고, 격자 기반 사전 계산 결과를 저장/관리합니다.",
-        "details": "Spring Boot에서 Redis 연동 설정. TTL 1시간 캐싱 로직 구현. 격자(예: 500m x 500m) 단위로 사전 계산 스케줄러 개발. 캐시 무효화 및 갱신 전략 설계.",
-        "testStrategy": "Redis 캐시 hit/miss 비율 모니터링. 사전 계산 결과의 정확성 및 TTL 만료 후 재계산 테스트. 성능 벤치마크(응답 시간 측정).",
-        "priority": "high",
+        "title": "GeoJSON Polygon 응답 포맷 검증 및 최적화",
+        "description": "Isochrone API의 GeoJSON Polygon 응답 구조를 검증하고, 필요시 포맷을 최적화합니다.",
+        "details": "OTP에서 반환하는 GeoJSON 결과를 샘플링하여 좌표, 폴리곤 구조, 속성값 등이 표준 GeoJSON 스펙을 준수하는지 확인. 불필요한 속성 제거 및 응답 크기 최적화.",
+        "testStrategy": "GeoJSON Linter 및 샘플 지도 시각화 도구(예: QGIS, Leaflet)로 응답 데이터 검증.",
+        "priority": "medium",
         "dependencies": [
           4
         ],
@@ -355,209 +350,199 @@
         "subtasks": [
           {
             "id": 1,
-            "title": "Spring Boot Redis 연동 설정 및 CacheManager 구성",
-            "description": "Spring Boot 애플리케이션에 Redis 의존성을 추가하고, Redis 서버 연결을 설정합니다. Spring Cache 추상화를 활용하여 RedisCacheManager를 구성하여 캐싱 기능을 활성화합니다.",
-            "dependencies": [
-              4
-            ],
-            "details": "build.gradle 파일에 'spring-boot-starter-data-redis' 의존성을 추가합니다. application.yml 또는 application.properties 파일에 Redis 호스트, 포트, 데이터베이스 등의 연결 정보를 설정합니다. @Configuration 클래스에서 RedisTemplate 및 RedisCacheManager 빈을 정의하고, 캐시 TTL 기본값(예: 1시간)을 설정합니다.",
+            "title": "OTP Isochrone API 샘플 응답 수집 및 분석",
+            "description": "Task 4에서 구현된 API 엔드포인트에 실제 요청(예: 서울역 기준 30분, 60분 대중교통)을 보내, 반환되는 GeoJSON 응답의 전체 구조와 데이터를 수집합니다.",
+            "dependencies": [],
+            "details": "Postman 또는 curl을 사용하여 `/otp/routers/default/isochrone` 엔드포인트에 여러 `cutoffSec` 값으로 요청을 보냅니다. 반환된 JSON 응답을 파일로 저장하여 분석 준비를 합니다.",
             "status": "pending",
-            "testStrategy": "Redis 서버 연결 성공 여부를 확인하는 통합 테스트를 작성합니다. 간단한 서비스 메서드에 @Cacheable 어노테이션을 적용하여 캐시가 정상적으로 동작하는지 확인합니다."
+            "testStrategy": "API 호출이 성공(200 OK)하고, 유효한 JSON 형식의 응답을 받았는지 확인합니다."
           },
           {
             "id": 2,
-            "title": "Isochrone API 결과에 Redis 캐싱 로직 적용",
-            "description": "Task 4에서 개발된 Isochrone REST API 엔드포인트의 응답 결과에 대해 Redis 기반 캐싱 로직을 적용합니다. 요청 파라미터를 기반으로 고유한 캐시 키를 생성하고, 캐시된 데이터의 유효 기간(TTL)을 1시간으로 설정합니다.",
+            "title": "GeoJSON 응답의 표준(RFC 7946) 준수 여부 검증",
+            "description": "수집된 샘플 응답이 GeoJSON 표준(RFC 7946)을 준수하는지 검증합니다. FeatureCollection, Feature, Geometry (Polygon/MultiPolygon), 좌표 순서 등을 확인합니다.",
             "dependencies": [
-              1,
-              4
+              1
             ],
-            "details": "IsochroneService의 주요 isochrone 계산 메서드에 @Cacheable 어노테이션을 추가합니다. 캐시 이름과 함께 요청 파라미터(출발지 좌표, 시간, 이동수단 등)를 조합하여 동적으로 캐시 키를 생성하는 SpEL 표현식을 사용합니다. RedisCacheManager 설정에서 해당 캐시의 TTL이 1시간으로 적용되도록 합니다.",
+            "details": "`geojson-lint`와 같은 온라인 도구나 라이브러리를 사용하여 수집된 GeoJSON 데이터의 유효성을 검사합니다. 오류나 경고가 발생하는 부분을 기록합니다.",
             "status": "pending",
-            "testStrategy": "동일한 요청으로 API를 여러 번 호출하여 첫 요청 시 캐시 miss, 이후 요청 시 캐시 hit가 발생하는지 확인합니다. 캐시 만료(TTL 1시간) 후 재요청 시 새로운 데이터가 계산되고 캐싱되는지 테스트합니다."
+            "testStrategy": "GeoJSON Linter 통과 여부를 확인하고, QGIS 또는 geojson.io와 같은 도구에서 에러 없이 시각화되는지 검증합니다."
           },
           {
             "id": 3,
-            "title": "격자 기반 사전 계산을 위한 지리 공간 데이터 모델 및 유틸리티 구현",
-            "description": "Isochrone 사전 계산을 위해 한국 지도를 특정 크기(예: 500m x 500m)의 격자로 나누고, 각 격자의 중심점을 생성 및 관리하는 지리 공간 데이터 모델과 유틸리티 클래스를 구현합니다. 격자 정의에 필요한 바운딩 박스 및 해상도 설정을 포함합니다.",
+            "title": "응답 데이터 최적화를 위한 목표 GeoJSON 포맷 정의",
+            "description": "원본 OTP 응답에서 불필요한 속성(properties)을 식별하고, 클라이언트에서 꼭 필요한 정보만 남긴 최적화된 GeoJSON Feature의 속성 구조를 정의합니다.",
             "dependencies": [
-              4
+              1,
+              2
             ],
-            "details": "GridPoint 또는 CellDTO와 같은 데이터 모델 클래스를 위도(latitude), 경도(longitude) 및 고유 식별자(ID) 필드와 함께 정의합니다. 주어진 지리적 바운딩 박스 내에서 지정된 해상도(예: 500m)로 균일하게 격자 중심점을 생성하는 유틸리티 메서드를 포함하는 GridGenerator 또는 GeoGridService 클래스를 작성합니다. 격자 포인트 생성 시 중복 방지 로직을 고려합니다.",
+            "details": "원본 속성 중 `time`, `distance` 등 핵심 정보 외의 불필요한 메타데이터를 제거 대상으로 선정합니다. 최종적으로 반환할 GeoJSON Feature의 `properties` 스키마를 문서화합니다.",
             "status": "pending",
-            "testStrategy": "특정 바운딩 박스와 격자 해상도를 입력하여 격자 생성 유틸리티를 호출하고, 생성된 격자 포인트들의 개수, 위도/경도 값의 범위 및 분포가 예상과 일치하는지 단위 테스트를 통해 검증합니다."
+            "testStrategy": "정의된 목표 포맷이 API 요구사항을 모두 만족시키는지 동료 검토(peer review)를 통해 확인합니다."
           },
           {
             "id": 4,
-            "title": "Isochrone 격자 사전 계산 스케줄러 구현 및 Redis 저장",
-            "description": "Task 3에서 정의된 격자 지점들을 순회하며 OpenTripPlanner(OTP) API를 호출하여 isochrone을 사전 계산하고, 그 결과를 Redis에 저장하는 주기적인 스케줄러를 구현합니다. 이 스케줄러는 OTP 그래프 업데이트 주기를 고려하여 캐시를 갱신합니다.",
+            "title": "원본 OTP 응답을 목표 포맷으로 변환하는 로직 구현",
+            "description": "OTP 서버로부터 받은 원본 GeoJSON을 입력받아, 3번에서 정의한 목표 포맷으로 변환하는 중간 처리 로직(예: 프록시, 래퍼 함수)을 구현합니다.",
             "dependencies": [
-              2,
-              3,
-              4
+              3
             ],
-            "details": "Spring의 @Scheduled 어노테이션을 사용하여 특정 주기로 실행되는 스케줄링 잡을 구현합니다. GridGenerator를 통해 모든 격자 포인트를 가져와 각 포인트에 대해 IsochroneService를 호출하여 isochrone을 계산합니다. 계산된 GeoJSON 형식의 isochrone 결과를 'precomputed:isochrone:{gridPointId}:{travelMode}'와 같은 특정 캐시 키로 Redis에 저장하고, TTL을 설정합니다.",
+            "details": "Node.js 또는 Python 기반의 간단한 함수를 작성합니다. 이 함수는 GeoJSON 객체를 순회하며 `properties` 객체에서 불필요한 키-값 쌍을 제거하고, 필요한 경우 구조를 단순화합니다.",
             "status": "pending",
-            "testStrategy": "스케줄러를 수동으로 실행한 후, Redis에 'precomputed:isochrone' 패턴의 키로 저장된 데이터가 있는지 확인합니다. 저장된 데이터의 형식(GeoJSON) 및 내용이 올바른지 검증합니다. 스케줄러의 실행 주기 및 로그를 통해 정상 동작을 확인합니다."
+            "testStrategy": "단위 테스트를 작성하여, 샘플 원본 GeoJSON을 입력했을 때 예상되는 목표 포맷 GeoJSON이 정확히 출력되는지 검증합니다."
           },
           {
             "id": 5,
-            "title": "사전 계산 및 요청 기반 캐시 무효화/갱신 전략 및 모니터링 구현",
-            "description": "사전 계산된 isochrone 캐시와 요청 기반 isochrone 캐시의 무효화 및 갱신 전략을 최종적으로 설계하고 구현합니다. OTP 그래프 업데이트와 같은 데이터 변경 이벤트 발생 시 캐시를 효율적으로 무효화하고, Redis 캐시의 hit/miss 비율 등 주요 메트릭을 모니터링합니다.",
+            "title": "변환된 최종 GeoJSON 응답의 유효성 및 시각화 검증",
+            "description": "4번에서 구현된 변환 로직을 거친 최종 GeoJSON 결과물이 여전히 유효한 표준을 따르는지, 그리고 지도 상에서 왜곡 없이 정상적으로 렌더링되는지 최종 검증합니다.",
             "dependencies": [
-              2,
               4
             ],
-            "details": "OTP 그래프 업데이트 시점에 전체 또는 특정 캐시 키 패턴을 사용하여 Redis 캐시를 무효화하는 기능을 구현합니다(예: Redis Template의 `deletePattern` 사용). Spring Boot Actuator와 Micrometer를 연동하여 Redis 캐시 관련 메트릭(예: `cache.gets`, `cache.puts`, `cache.hits`, `cache.misses`)을 수집하고, 이를 Prometheus/Grafana와 같은 모니터링 시스템에서 활용할 수 있도록 설정합니다.",
+            "details": "변환된 GeoJSON 파일을 geojson.io, QGIS 등의 도구에 로드하여 폴리곤 경계가 올바르게 표시되는지 확인합니다. 또한, `geojson-lint`로 다시 한번 표준 준수 여부를 검사합니다.",
             "status": "pending",
-            "testStrategy": "특정 캐시를 수동으로 무효화하는 API 엔드포인트 또는 테스트 메서드를 통해 캐시 무효화가 정상적으로 작동하는지 확인합니다. 모니터링 툴(예: Actuator 엔드포인트)을 통해 캐시 통계 메트릭이 올바르게 노출되는지 확인하고, 캐시 hit/miss 시나리오를 발생시켜 메트릭 변화를 관찰합니다."
+            "testStrategy": "여러 시간대(cutoffSec) 및 출발지(fromPlace)에 대해 생성된 최적화된 GeoJSON 파일들이 모두 지도 시각화 도구에서 에러 없이 렌더링되는지 확인합니다."
           }
         ]
       },
       {
         "id": 7,
-        "title": "부동산 실거래가 및 주요 목적지 데이터 연동 및 DB 설계",
-        "description": "국토교통부 실거래가 API, 주요 비즈니스 허브(강남, 여의도 등) 데이터를 PostgreSQL(PostGIS)에 연동 및 저장합니다.",
-        "details": "공공데이터포털 API 연동 모듈 개발. 주요 목적지 POI DB 테이블 설계 및 데이터 적재. 실거래가 데이터 정규화 및 공간 인덱스 적용.",
-        "testStrategy": "API 연동 정상 동작 확인. DB 쿼리로 주요 목적지 및 매물 데이터 조회 테스트. 공간 인덱스 성능 테스트.",
-        "priority": "medium",
+        "title": "API 성능 측정 및 기본 튜닝",
+        "description": "Isochrone API의 응답시간, 메모리 사용량 등 성능을 측정하고, 기본적인 튜닝을 적용합니다.",
+        "details": "JMeter, ab 등 벤치마크 도구로 다양한 파라미터(예: 강남 60분 기준)로 API 부하 테스트. OTP JVM 옵션, Docker 리소스 할당, 그래프 캐싱 등 기본 튜닝 적용.",
+        "testStrategy": "성능 측정 결과가 PRD 기준(60분 isochrone 15-25초, 메모리 8-12GB) 내에 들어오는지 확인.",
+        "priority": "high",
         "dependencies": [
-          1
+          6
         ],
         "status": "pending",
         "subtasks": [
           {
             "id": 1,
-            "title": "PostGIS 테이블 스키마 설계 및 DDL 정의 (POIs, 실거래가)",
-            "description": "PostGIS 기능을 활용하여 주요 목적지(POI)와 국토교통부 실거래가 데이터를 저장할 PostgreSQL(PostGIS) 테이블 스키마를 설계하고 DDL(Data Definition Language)을 정의합니다. POI는 지점(Point) 정보를, 실거래가는 지점 또는 폴리곤(건물 대지) 정보를 저장할 수 있도록 geometry 타입과 메타데이터를 포함합니다.",
+            "title": "성능 측정 환경 구축 및 벤치마크 시나리오 정의",
+            "description": "API 성능 측정을 위한 JMeter 또는 Apache Benchmark(ab) 환경을 설정하고, 부하 테스트에 사용할 시나리오를 구체적으로 정의합니다.",
             "dependencies": [],
-            "details": "주요 목적지 테이블은 POI ID, 이름, 유형(예: 비즈니스 허브), 위경도(POINT) 등을 포함합니다. 실거래가 테이블은 거래 ID, 거래 유형, 주소, 거래 금액, 계약 일자, 평면도 정보, 위경도(POINT) 또는 건물 영역(POLYGON) 등을 포함하며, 실거래가 데이터 정규화(예: 주소 파싱, 단위 통일)를 고려하여 스키마를 구성합니다. 공간 인덱스 적용을 위한 컬럼을 미리 정의합니다.",
+            "details": "JMeter를 설치하고 테스트 계획(Test Plan)을 생성합니다. 대상 API 엔드포인트는 '/otp/routers/default/isochrone'로 설정합니다. 주요 테스트 시나리오로 '강남역, 60분, 대중교통'과 '판교역, 30분, 도보' 등 대표적인 케이스를 포함하여 정의합니다.",
             "status": "pending",
-            "testStrategy": null
+            "testStrategy": "JMeter 또는 ab가 설치되고, 정의된 시나리오로 단일 요청을 보내 정상 응답을 받는지 확인합니다."
           },
           {
             "id": 2,
-            "title": "주요 목적지(POI) 데이터 수집 및 DB 적재 모듈 개발",
-            "description": "설계된 POI 테이블 스키마에 맞춰 강남, 여의도 등 주요 비즈니스 허브의 좌표 및 관련 정보를 수집하고, 이를 PostgreSQL(PostGIS) 데이터베이스에 적재하는 모듈을 개발합니다. 초기 데이터는 정적으로 구성될 수 있습니다.",
+            "title": "초기(Baseline) 성능 벤치마크 실행 및 결과 수집",
+            "description": "튜닝을 적용하기 전 현재 상태의 API 성능을 측정하여 기준 데이터를 확보합니다. 응답 시간, 처리량(TPS), 메모리 사용량, CPU 사용률을 기록합니다.",
             "dependencies": [
               1
             ],
-            "details": "주요 목적지 POI 리스트를 정의하고, 각 POI의 이름, 유형, 위경도(POINT) 정보를 확보합니다. Spring Boot 애플리케이션 내에서 Flyway 또는 Liquibase를 사용하여 초기 데이터 마이그레이션 스크립트를 작성하거나, 별도의 Java/Python 유틸리티를 개발하여 데이터를 POI 테이블에 일괄 적재합니다. 데이터 중복 방지 및 업데이트 전략을 고려합니다.",
+            "details": "정의된 벤치마크 시나리오에 따라 10분 이상 부하 테스트를 실행합니다. JMeter의 Summary Report, Aggregate Graph 등을 통해 결과를 수집하고, `docker stats` 명령어로 컨테이너의 리소스 사용량을 모니터링하여 기록합니다.",
             "status": "pending",
-            "testStrategy": "DB 쿼리를 통해 POI 테이블에 데이터가 정확하게 적재되었는지 확인합니다. 특히 geometry 컬럼의 데이터 유효성을 검증합니다."
+            "testStrategy": "벤치마크 실행 후 결과 리포트 파일(JTL)이 생성되고, 응답 시간 및 리소스 사용량 데이터가 정상적으로 수집되었는지 확인합니다."
           },
           {
             "id": 3,
-            "title": "국토교통부 실거래가 API 연동 모듈 개발",
-            "description": "공공데이터포털에서 제공하는 국토교통부 부동산 실거래가 API(아파트매매 실거래자료 등)와 연동하여 데이터를 조회하고 파싱하는 모듈을 개발합니다. API 인증, 요청 파라미터 구성, 응답 데이터(XML/JSON) 처리 로직을 포함합니다.",
-            "dependencies": [],
-            "details": "Spring Boot의 `WebClient` 또는 `RestTemplate`를 활용하여 API 호출 로직을 구현합니다. API 키 관리, 요청 URL 및 파라미터(예: 시/군/구 코드, 계약월) 구성, 응답 데이터(XML 또는 JSON)를 Java 객체로 변환(매핑)하는 로직을 개발합니다. API 호출 제한 및 에러 처리 메커니즘을 포함합니다.",
+            "title": "OTP JVM 옵션 및 Docker 리소스 할당 튜닝",
+            "description": "수집된 초기 성능 데이터를 바탕으로 OTP 서버의 JVM 힙 메모리 옵션과 Docker 컨테이너의 리소스 할당량을 조정합니다.",
+            "dependencies": [
+              2
+            ],
+            "details": "`docker-compose.yml` 파일 내 OTP 서비스의 `environment` 섹션에서 `JAVA_OPTS`를 수정하여 `-Xmx` (최대 힙 크기) 및 `-Xms` (초기 힙 크기) 값을 조정합니다. 예를 들어, `-Xmx10g -Xms10g` 와 같이 설정합니다. 또한 `deploy.resources.limits`를 사용하여 컨테이너의 CPU 및 메모리 제한을 설정합니다.",
             "status": "pending",
-            "testStrategy": "Mock API 서버 또는 실제 API에 대한 연동 테스트를 수행하여 데이터 조회 및 파싱이 정상적으로 이루어지는지 확인합니다. 다양한 조건(예: 유효하지 않은 파라미터, 데이터 없음)에서의 예외 처리를 검증합니다."
+            "testStrategy": "수정된 `docker-compose.yml`로 컨테이너를 재시작한 후, `docker inspect` 명령어나 실행 중인 Java 프로세스 확인을 통해 JVM 옵션이 올바르게 적용되었는지 검증합니다."
           },
           {
             "id": 4,
-            "title": "실거래가 데이터 정규화 및 DB 저장 로직 구현",
-            "description": "국토교통부 API를 통해 수집된 실거래가 데이터를 설계된 DB 스키마에 맞춰 정규화하고, PostGIS 테이블에 저장하는 로직을 구현합니다. 주소 정보로부터 지오코딩을 통해 공간 데이터(위경도)를 생성하는 과정을 포함합니다.",
+            "title": "OTP 그래프 캐싱 전략 적용",
+            "description": "API 요청 시마다 그래프를 로딩하는 오버헤드를 줄이기 위해, 서버 시작 시점에 그래프를 미리 로드하여 메모리에 상주시키는 캐싱 전략을 적용합니다.",
             "dependencies": [
-              1,
-              3
+              2
             ],
-            "details": "API 연동 모듈(Subtask 3)로부터 받은 데이터를 기반으로, 설계된 실거래가 테이블의 컬럼에 맞춰 데이터를 변환하고 정규화합니다. 특히, API 응답에 포함된 주소 정보를 활용하여 GeoJSON Point 또는 Polygon 형태로 변환하고, 해당 공간 정보를 PostGIS `geometry` 타입으로 저장합니다. Spring Data JPA 또는 JDBC Template을 사용하여 데이터 저장 로직을 구현합니다. 데이터 중복을 방지하기 위한 upsert 또는 적절한 데이터 관리 전략을 적용합니다.",
+            "details": "OTP 서버 실행 명령어에 `--load` 옵션을 명시하여 컨테이너 시작 시점에 그래프 파일(graph.obj)을 즉시 로드하도록 설정합니다. `docker-compose.yml`의 `command` 부분을 수정하여 이 옵션을 추가합니다. 이를 통해 첫 API 요청의 응답 지연을 최소화합니다.",
             "status": "pending",
-            "testStrategy": "샘플 API 응답 데이터를 사용하여 DB 저장 로직을 테스트하고, 저장된 데이터가 DB 스키마에 맞게 정확히 매핑되었는지, geometry 컬럼에 올바른 공간 데이터가 저장되었는지 확인합니다. 특히 지오코딩 결과의 정확도를 검증합니다."
+            "testStrategy": "컨테이너 로그를 확인하여 OTP 서버 시작 시점에 'Graph data loaded.' 와 같은 로그가 출력되는지, 그리고 서버 기동 후 첫 API 요청의 응답 속도가 눈에 띄게 개선되었는지 확인합니다."
           },
           {
             "id": 5,
-            "title": "PostGIS 공간 인덱스 적용 및 쿼리 성능 최적화",
-            "description": "실거래가 및 POI 테이블의 공간 데이터 컬럼에 PostGIS의 GiST(Generalized Search Tree) 인덱스를 적용하고, 기본적인 공간 쿼리 성능을 테스트하여 데이터 조회 효율성을 최적화합니다.",
+            "title": "튜닝 후 성능 재측정 및 결과 비교 분석",
+            "description": "JVM, Docker, 캐싱 튜닝이 적용된 상태에서 동일한 시나리오로 벤치마크를 다시 실행하고, 초기 성능 데이터와 비교하여 개선 효과를 검증합니다.",
             "dependencies": [
+              3,
               4
             ],
-            "details": "PostGIS `CREATE INDEX` 구문을 사용하여 `geometry` 타입 컬럼에 GiST 인덱스를 생성합니다. (예: `CREATE INDEX idx_realty_geometry ON real_estate_transactions USING GIST (geometry_column);`). 인덱스 생성 후, `ST_Contains`, `ST_Intersects`, `ST_DWithin` 등 PostGIS 공간 함수를 사용하는 샘플 쿼리를 작성하여 인덱스 활용 여부(`EXPLAIN ANALYZE`) 및 쿼리 응답 시간을 측정하고 최적화 작업을 수행합니다.",
+            "details": "초기 벤치마크와 동일한 조건(동일 시나리오, 동일 부하)에서 성능 테스트를 재실행합니다. 튜닝 전/후의 평균 응답 시간, 처리량, 메모리 사용량 변화를 비교 분석하는 보고서를 작성합니다. 목표 성능(60분 isochrone 15-25초, 메모리 8-12GB) 달성 여부를 확인합니다.",
             "status": "pending",
-            "testStrategy": "인덱스 생성 스크립트 실행 후 `\\d table_name` 명령어로 인덱스 존재 여부를 확인합니다. 다양한 공간 쿼리를 실행하여 `EXPLAIN ANALYZE`로 인덱스가 제대로 사용되는지, 쿼리 응답 시간이 허용 가능한 수준인지 검증합니다. 대량의 데이터 삽입 후 성능 테스트를 추가적으로 수행합니다."
+            "testStrategy": "최종 성능 측정 결과가 PRD에 명시된 목표치(응답시간 15-25초, 메모리 8-12GB) 범위 내에 들어오는지 확인하고, 초기 데이터 대비 최소 20% 이상의 성능 향상이 있었는지 검증합니다."
           }
         ]
       },
       {
         "id": 8,
-        "title": "부동산-교통 접근성 점수 계산 알고리즘 및 비교 분석 API 개발",
-        "description": "각 부동산 매물별 주요 목적지까지의 이동 시간, 환승 횟수, 도보 시간 등을 종합하여 접근성 점수를 산출하고, 비교 분석 기능을 제공합니다.",
-        "details": "Spring Boot에서 접근성 점수 계산 로직 구현(가중치, 환승, 도보 포함). POST /api/v1/accessibility/analyze, GET /api/v1/properties/{id}/accessibility API 개발. 비교 분석 테이블 및 랭킹 알고리즘 설계.",
-        "testStrategy": "샘플 매물/목적지 데이터로 점수 계산 결과 검증. API 응답의 정확성 및 비교 분석 결과 테스트. 엣지 케이스(환승, 도보 극단값) 시나리오 테스트.",
+        "title": "API 안정성 및 장애 대응 테스트",
+        "description": "API의 외부 호출 성공률, 장애 상황(데이터 오류, 서버 다운 등)에서의 대응 방안을 검증합니다.",
+        "details": "연속 호출, 경계값 입력, 데이터 누락 등 다양한 시나리오에서 API 성공률 측정. 장애 발생 시 로그 기록, 에러 응답, 자동 재시작 등 대응 로직 구현.",
+        "testStrategy": "95% 이상 성공률 달성 여부 및 장애 상황에서의 복구/에러 응답 테스트.",
         "priority": "medium",
         "dependencies": [
-          4,
           7
         ],
         "status": "pending",
         "subtasks": [
           {
             "id": 1,
-            "title": "부동산 접근성 점수 계산 알고리즘 정의 및 핵심 로직 구현",
-            "description": "이동 시간, 환승 횟수, 도보 시간 등 다양한 요소를 종합적으로 고려하여 부동산 접근성 점수를 산출하는 알고리즘을 설계하고, 이를 Spring Boot 서비스 레이어에 구현합니다. 가중치 설정 및 파라미터화 방안을 포함합니다.",
+            "title": "API 안정성 테스트 시나리오 및 성공 기준 정의",
+            "description": "부하 테스트, 경계값 테스트, 장애 주입 테스트 등 구체적인 테스트 시나리오를 설계하고, 각 시나리오에 대한 성공 기준(응답 성공률, 응답 시간, 복구 시간 등)을 정량적으로 정의합니다.",
             "dependencies": [],
-            "details": "이동 시간, 환승 횟수, 도보 시간 등의 교통 데이터를 바탕으로 부동산 접근성 점수를 계산하는 `AccessibilityScoreCalculator` 서비스 또는 유틸리티 클래스를 Spring Boot 애플리케이션 내에 구현합니다. 가중치는 외부 설정(application.yml 또는 DB)을 통해 유연하게 관리할 수 있도록 설계하며, 초기 가중치 값을 정의합니다. 핵심 계산 로직에 대한 명확한 함수 시그니처와 반환 타입을 정의합니다.",
+            "details": "문서(예: Markdown 파일)에 테스트 케이스 ID, 시나리오 설명, 요청 파라미터, 예상 결과, 성공 기준(예: 1000 RPM에서 99% 성공률)을 명시하여 테스트 계획을 수립합니다.",
             "status": "pending",
-            "testStrategy": "단위 테스트를 통해 다양한 가중치와 입력값(이동 시간, 환승 수 등)에 대한 점수 계산이 올바른지 검증합니다. 엣지 케이스(예: 환승 없음, 도보 거리 0)를 포함하여 테스트합니다."
+            "testStrategy": "수립된 테스트 계획이 태스크의 요구사항을 모두 포함하는지 동료 검토를 통해 확인합니다."
           },
           {
             "id": 2,
-            "title": "OpenTripPlanner 연동 및 이동 데이터 추출 로직 구현",
-            "description": "정의된 접근성 점수 계산을 위해 필요한 이동 시간, 환승 횟수, 도보 시간 등의 데이터를 OpenTripPlanner (OTP) 엔진으로부터 조회하고 파싱하는 로직을 구현합니다. 기존 Task 4 (Isochrone API)의 OTP 연동 방식을 참고하여 재사용하거나 확장합니다.",
+            "title": "API 부하 테스트 스크립트 개발 및 실행",
+            "description": "정의된 시나리오에 따라 API에 연속적인 호출을 보내는 부하 테스트 스크립트를 작성합니다. 스크립트 실행 후 결과를 바탕으로 API 성공률과 평균 응답 시간을 측정합니다.",
             "dependencies": [
               1
             ],
-            "details": "OpenTripPlanner(OTP) 엔진의 REST API를 호출하여 출발지(부동산)와 목적지 간의 이동 시간, 총 환승 횟수, 총 도보 거리 등의 경로 정보를 조회하는 클라이언트 및 서비스 로직을 구현합니다. 기존 Task 4에서 OTP와 연동하는 방식을 참고하여 재사용성을 높이고, OTP 응답 JSON을 파싱하여 필요한 데이터 모델로 변환하는 과정을 포함합니다. 네트워크 오류 및 OTP 응답 실패 시의 예외 처리 로직을 구현합니다.",
+            "details": "Python의 `requests`와 `asyncio` 또는 `k6`, `JMeter`와 같은 부하 테스트 도구를 사용하여 스크립트를 개발합니다. 스크립트는 분당 요청 수(RPM)를 파라미터로 조절할 수 있도록 구현합니다.",
             "status": "pending",
-            "testStrategy": "모의 OTP 응답을 사용하여 데이터 추출 로직의 정확성을 검증하는 단위 테스트를 작성합니다. 실제 OTP 서버와 연동하여 샘플 경로에 대한 데이터 추출 테스트를 수행하고, 다양한 이동 수단(버스, 지하철)에 대한 경로 데이터를 확인합니다."
+            "testStrategy": "개발된 스크립트가 정의된 부하 테스트 시나리오대로 동작하는지 확인하고, 측정된 성공률과 응답 시간이 성공 기준을 만족하는지 검증합니다."
           },
           {
             "id": 3,
-            "title": "다중 부동산 접근성 분석 API (POST /api/v1/accessibility/analyze) 구현",
-            "description": "여러 개의 부동산과 목적지 쌍을 입력받아 각각의 접근성 점수를 계산하고 반환하는 REST API 엔드포인트를 Spring Boot에 구현합니다. 요청 본문 유효성 검증 및 비동기 처리 가능성을 고려합니다.",
+            "title": "예외 및 경계값 처리 테스트 스크립트 개발",
+            "description": "유효하지 않은 좌표, 허용 범위를 벗어난 시간(cutoffSec), 지원하지 않는 이동수단, 필수 파라미터 누락 등 다양한 예외 및 경계값 케이스에 대한 테스트 자동화 스크립트를 작성합니다.",
             "dependencies": [
-              1,
-              2
+              1
             ],
-            "details": "Spring Boot Controller를 사용하여 `POST /api/v1/accessibility/analyze` 엔드포인트를 구현합니다. 요청 본문으로 여러 개의 부동산-목적지 쌍 리스트를 포함하는 DTO를 정의하고, 각 쌍에 대해 Subtask 2의 OTP 데이터 조회 및 Subtask 1의 점수 계산 로직을 순차적으로 호출합니다. 결과는 각 부동산-목적지 쌍의 ID와 계산된 접근성 점수를 포함하는 응답 DTO 리스트 형태로 반환합니다. 입력 데이터 유효성 검증(Validation) 및 대량 요청 처리를 위한 비동기 처리(예: Spring Async) 도입을 검토합니다.",
+            "details": "각 예외 케이스별로 API를 호출하고, 예상된 HTTP 상태 코드(예: 400 Bad Request)와 에러 메시지가 응답으로 반환되는지 검증하는 코드를 포함하여 스크립트를 작성합니다.",
             "status": "pending",
-            "testStrategy": "통합 테스트를 통해 API의 요청/응답 스펙 준수 여부, 입력 유효성 검증, 에러 처리 로직을 검증합니다. Postman 또는 curl을 사용하여 다수의 부동산/목적지 쌍에 대한 요청 및 응답을 테스트합니다."
+            "testStrategy": "모든 예외/경계값 테스트 케이스를 실행하여, API가 예상된 오류 코드와 메시지를 정확히 반환하는지 확인합니다."
           },
           {
             "id": 4,
-            "title": "특정 부동산 접근성 점수 조회 API (GET /api/v1/properties/{id}/accessibility) 구현",
-            "description": "단일 부동산 ID를 받아 해당 부동산의 주요 목적지(예: 직장, 학교 등 미리 정의된 목적지)까지의 접근성 점수를 계산하거나 저장된 점수를 조회하여 반환하는 REST API 엔드포인트를 구현합니다.",
-            "dependencies": [
-              1,
-              2,
-              3
-            ],
-            "details": "Spring Boot Controller를 사용하여 `GET /api/v1/properties/{id}/accessibility` 엔드포인트를 구현합니다. `id` 파라미터로 주어진 부동산에 대해, 시스템에 미리 정의된 주요 목적지(예: 직장, 학교, 상업 지구 등) 목록을 조회합니다. 각 주요 목적지에 대해 Subtask 2의 로직으로 OTP 데이터를 가져오고 Subtask 1의 로직으로 접근성 점수를 계산합니다. 계산된 점수는 캐싱 전략(예: Redis Cache)을 적용하여 성능을 최적화하고, 응답 DTO에 부동산 ID, 목적지 정보, 그리고 각 목적지별 접근성 점수를 포함하여 반환합니다.",
+            "title": "장애 감지를 위한 로깅 강화 및 Health Check 구현",
+            "description": "장애 발생 시 원인 분석을 용이하게 하도록 OTP 서버의 로깅 레벨을 조정하고, Docker 컨테이너의 서비스 상태를 주기적으로 확인할 수 있는 Health Check를 구현합니다.",
+            "dependencies": [],
+            "details": "`docker-compose.yml` 파일의 OTP 서비스에 `logging` 드라이버 및 옵션을 설정하여 로그를 관리합니다. `healthcheck` 속성을 추가하여 isochrone 엔드포인트에 주기적으로 `curl` 요청을 보내고 정상 응답(HTTP 200)을 확인하도록 구성합니다.",
             "status": "pending",
-            "testStrategy": "통합 테스트를 통해 단일 부동산 ID에 대한 API 응답의 정확성 및 성능을 검증합니다. 캐싱/DB 연동 시 데이터 일관성 테스트를 포함하며, 존재하지 않는 부동산 ID에 대한 에러 처리 시나리오를 테스트합니다."
+            "testStrategy": "컨테이너 로그에 에러가 정상적으로 기록되는지 확인하고, `docker inspect` 명령을 통해 health check 상태가 'healthy'로 표시되는지 검증합니다."
           },
           {
             "id": 5,
-            "title": "부동산 접근성 점수 비교 분석 및 랭킹 시스템 구현",
-            "description": "여러 부동산의 접근성 점수를 비교하고, 특정 기준(예: 총 점수, 특정 목적지 기준)에 따라 랭킹을 매기는 로직을 설계하고 구현합니다. 필요한 경우 비교 결과를 저장할 데이터 모델을 정의합니다.",
+            "title": "컨테이너 자동 복구 정책 적용 및 장애 시나리오 검증",
+            "description": "Docker 서비스가 예기치 않게 종료되었을 때 자동으로 재시작되도록 복구 정책을 설정하고, 실제 장애 상황을 시뮬레이션하여 자동 복구 기능이 정상 동작하는지 검증합니다.",
             "dependencies": [
-              3,
               4
             ],
-            "details": "계산된 여러 부동산의 접근성 점수(Subtask 3, 4를 통해 얻은 결과)를 비교하고, 특정 기준(예: 종합 점수, 특정 가중치에 따른 점수, 특정 목적지 우선순위)에 따라 순위를 매기는 핵심 비즈니스 로직을 `AccessibilityComparisonService`와 같은 서비스 레이어에 구현합니다. 비교 결과는 UI에 표시될 수 있도록 정렬된 리스트 또는 비교 데이터를 포함하는 데이터 모델로 구성합니다. 이 로직은 `POST /api/v1/accessibility/analyze` 응답에 랭킹 정보를 추가하거나, 별도의 비교 분석 API를 통해 제공될 수 있도록 유연하게 설계합니다.",
+            "details": "`docker-compose.yml` 파일의 OTP 서비스에 `restart: unless-stopped` 정책을 추가합니다. `docker kill <container_id>` 명령으로 컨테이너를 강제 종료시킨 후, `docker ps`를 통해 컨테이너가 자동으로 재시작되고 health check가 다시 'healthy' 상태로 전환되는지 확인합니다.",
             "status": "pending",
-            "testStrategy": "다양한 점수 조합에 대한 랭킹 로직의 정확성을 검증하는 단위 테스트를 작성합니다. API와 연동하여 비교 분석 및 랭킹 결과가 올바르게 반환되는지 통합 테스트를 수행하며, 동점 처리 및 랭킹 기준 변경에 따른 결과 변화를 검증합니다."
+            "testStrategy": "컨테이너를 수동으로 중지/종료시킨 후, 정의된 시간 내에 자동으로 재시작되어 서비스가 정상화되는지 반복적으로 테스트하여 검증합니다."
           }
         ]
       },
       {
         "id": 9,
-        "title": "보고서(PDF) 생성 및 내보내기 기능 구현",
-        "description": "부동산 접근성 분석 결과를 PDF 보고서로 생성하여 다운로드/공유할 수 있도록 기능을 추가합니다.",
-        "details": "Spring Boot에서 PDF 생성 라이브러리(iText 등) 연동. 분석 결과(지도, 테이블, 차트) 시각화 후 PDF로 변환. 다운로드 및 이메일 공유 기능 구현.",
-        "testStrategy": "샘플 분석 결과로 PDF 생성 후 시각적/데이터 검증. 다양한 브라우저/환경에서 다운로드 및 공유 테스트.",
+        "title": "API 사용 예시 및 문서화",
+        "description": "Isochrone API의 사용법, 파라미터 설명, 샘플 요청/응답 예시를 README 및 별도 문서로 작성합니다.",
+        "details": "README.md에 API 엔드포인트, 파라미터 설명, 샘플 curl 명령어, 응답 예시(GeoJSON) 등 문서화. 오류 코드 및 제한사항 명시.",
+        "testStrategy": "문서만 보고 API를 호출할 수 있는지, 샘플 요청이 정상 동작하는지 검증.",
         "priority": "medium",
         "dependencies": [
           8
@@ -566,130 +551,132 @@
         "subtasks": [
           {
             "id": 1,
-            "title": "PDF 생성 라이브러리 선정 및 Spring Boot 연동",
-            "description": "Spring Boot 프로젝트에 적합한 PDF 생성 라이브러리(예: iText 또는 Apache PDFBox)를 선정하고, 의존성 추가 및 기본 설정을 완료합니다. 간단한 텍스트로 PDF를 생성하는 예제 코드를 구현하여 라이브러리 연동을 확인합니다.",
+            "title": "README.md에 API 개요 및 엔드포인트 정보 추가",
+            "description": "README.md 파일에 Isochrone API의 기능, 목적을 설명하는 개요 섹션을 추가하고, 기본 API 엔드포인트 URL을 명시합니다.",
             "dependencies": [],
-            "details": "`build.gradle` 또는 `pom.xml`에 PDF 라이브러리 의존성을 추가하고, `@Configuration` 클래스에 관련 빈(Bean)을 정의합니다. 간단한 테스트 서비스(예: `PdfGeneratorService.generateSimplePdf()`)를 구현하여 'Hello, PDF!'와 같은 내용을 담은 PDF 파일을 생성하고 저장하는 기능을 테스트합니다.",
+            "details": "README.md 파일에 'API 사용법' 섹션을 생성하고, API가 어떤 문제를 해결하는지 간략히 설명합니다. `http://<your-server-address>/otp/routers/default/isochrone` 와 같은 형식으로 엔드포인트를 명시합니다.",
             "status": "pending",
-            "testStrategy": "라이브러리 의존성이 성공적으로 추가되었는지 확인하고, 개발 환경에서 예제 PDF 파일이 오류 없이 생성되고 내용이 올바른지 육안으로 확인합니다."
+            "testStrategy": "README.md 파일을 열어 개요 및 엔드포인트 정보가 명확하게 작성되었는지 확인합니다."
           },
           {
             "id": 2,
-            "title": "PDF 보고서 기본 구조 및 정적 내용 템플릿 구현",
-            "description": "접근성 분석 결과 보고서의 레이아웃(헤더, 푸터, 섹션 구분 등)을 설계하고, 기본적으로 포함될 정적 텍스트 내용(보고서 제목, 날짜, 회사 로고 등)을 포함한 PDF 템플릿을 구현합니다.",
+            "title": "API 요청 파라미터 상세 설명 작성",
+            "description": "API 호출에 사용되는 모든 쿼리 파라미터(fromPlace, cutoffSec, mode 등)에 대한 상세 설명을 README.md에 표 형식으로 작성합니다.",
             "dependencies": [
               1
             ],
-            "details": "선택된 PDF 라이브러리의 API를 활용하여 PDF 문서의 페이지 크기, 여백, 폰트 등을 설정하고, 보고서의 고정적인 부분(예: 상단 제목, 하단 페이지 번호, 회사 정보)을 템플릿 형태로 구현합니다. 이 단계에서는 동적 데이터 없이 정적인 내용만으로 PDF를 생성합니다.",
+            "details": "각 파라미터에 대해 이름, 타입, 필수 여부, 설명, 예시 값을 포함하는 마크다운 테이블을 작성합니다. 예를 들어, `fromPlace`는 '위도,경도' 형식의 문자열이고 필수 항목임을 명시합니다.",
             "status": "pending",
-            "testStrategy": "생성된 PDF 파일의 레이아웃, 폰트, 정적 텍스트 내용이 디자인 요구사항에 맞게 올바르게 출력되는지 확인합니다. 여러 페이지에 걸쳐 헤더/푸터가 일관되게 적용되는지 검토합니다."
+            "testStrategy": "문서에 명시된 파라미터 설명이 실제 API 동작과 일치하는지, 예시 값이 유효한지 확인합니다."
           },
           {
             "id": 3,
-            "title": "분석 결과 데이터 및 시각화 요소 PDF 동적 삽입 로직 구현",
-            "description": "Task 8에서 개발된 부동산 접근성 분석 결과 API를 호출하여 데이터를 가져오고, 지도 이미지, 표 형식의 데이터, 차트 이미지 등 시각화 요소를 PDF 보고서 템플릿에 동적으로 삽입하는 로직을 구현합니다.",
+            "title": "샘플 API 요청 예시 (curl) 작성",
+            "description": "사용자가 바로 복사해서 사용할 수 있는 완전한 `curl` 명령어 예시를 작성합니다. 실제 동작 가능한 파라미터 값들을 사용합니다.",
             "dependencies": [
-              2,
-              8
+              2
             ],
-            "details": "`RestTemplate` 또는 `WebClient`를 사용하여 Task 8의 `/api/v1/accessibility/analyze` 및 `/api/v1/properties/{id}/accessibility` API에서 분석 데이터를 가져옵니다. 지도 이미지는 외부 지도 서비스(예: 정적 지도 API)에서 가져오거나, 기존 프론트엔드에서 렌더링된 이미지를 받아와 PDF에 삽입하는 방법을 고려합니다. 표 데이터는 PDF 테이블로 변환하고, 차트 이미지는 생성(예: JFreeChart 사용 또는 외부 차트 API 호출 후 이미지 저장)하여 PDF에 추가합니다.",
+            "details": "서울 시내 특정 지점(예: 강남역)의 좌표와 일반적인 이동 시간(예: 3600초)을 파라미터로 사용하여 `curl` 명령어를 구성합니다. URL 인코딩이 필요한 경우 이를 명시합니다.",
             "status": "pending",
-            "testStrategy": "실제 분석 결과 데이터를 기반으로 PDF를 생성하여, 지도 이미지, 테이블 데이터, 차트가 보고서 내에 올바른 위치에 정확한 내용으로 표시되는지 상세히 검증합니다. 데이터 누락 또는 오정렬이 없는지 확인합니다."
+            "testStrategy": "README.md에 있는 `curl` 명령어를 터미널에서 직접 실행하여 API가 정상적으로 200 OK 응답을 반환하는지 확인합니다."
           },
           {
             "id": 4,
-            "title": "PDF 보고서 다운로드 API 엔드포인트 구현",
-            "description": "생성된 PDF 보고서를 사용자가 웹 브라우저를 통해 다운로드할 수 있도록 REST API 엔드포인트를 구현합니다. API 호출 시 동적으로 PDF를 생성하거나, 캐시된 PDF를 반환하도록 설계합니다.",
+            "title": "샘플 API 응답 예시 (GeoJSON) 작성 및 추가",
+            "description": "`curl` 예시 요청에 대한 실제 응답(GeoJSON 형식)을 README.md에 추가합니다. 가독성을 위해 일부 축약하거나 접을 수 있는 형태로 제공합니다.",
             "dependencies": [
               3
             ],
-            "details": "Spring Boot `RestController`에서 `GET /api/v1/reports/accessibility/{reportId}/download`와 같은 엔드포인트를 정의합니다. 이 엔드포인트는 `application/pdf` MIME 타입을 가진 `ResponseEntity<ByteArrayResource>` 또는 `OutputStream`을 반환하여, 브라우저가 파일을 다운로드하도록 유도합니다. 파일 이름 설정 및 오류 처리 로직을 포함합니다.",
+            "details": "3번 서브태스크의 `curl` 요청을 실행하여 얻은 GeoJSON 응답을 코드 블록으로 `README.md`에 추가합니다. 내용이 너무 길 경우, 주요 구조(type, features, geometry, properties)를 보여주고 좌표 배열은 일부만 표시합니다.",
             "status": "pending",
-            "testStrategy": "Postman 또는 웹 브라우저를 통해 API를 호출하여 PDF 파일이 정상적으로 다운로드되는지 확인합니다. 다운로드된 파일이 손상되지 않았고 내용이 올바른지 검증합니다. 여러 번 호출 시에도 일관된 동작을 보이는지 확인합니다."
+            "testStrategy": "문서에 포함된 GeoJSON 응답 예시가 유효한 GeoJSON 형식인지 linter로 검증하고, 구조가 실제 API 응답과 일치하는지 확인합니다."
           },
           {
             "id": 5,
-            "title": "PDF 보고서 이메일 공유 기능 구현",
-            "description": "생성된 PDF 보고서를 지정된 이메일 주소로 첨부하여 발송하는 기능을 구현합니다. 이메일 본문 템플릿을 포함하고, 메일 발송 성공/실패 처리를 포함합니다.",
+            "title": "오류 코드 및 API 제한 사항 문서화",
+            "description": "발생 가능한 주요 오류 케이스(예: 잘못된 파라미터)와 해당 HTTP 상태 코드 및 응답 메시지를 정리합니다. API의 성능적 제한 사항도 함께 명시합니다.",
             "dependencies": [
-              3
+              1,
+              2
             ],
-            "details": "Spring Mail Starter를 사용하여 `JavaMailSender`를 구성합니다. `POST /api/v1/reports/accessibility/{reportId}/share`와 같은 엔드포인트를 구현하여 수신자 이메일 주소를 받습니다. 생성된 PDF를 `MimeMessageHelper`를 통해 이메일 첨부 파일로 추가하고, HTML 또는 일반 텍스트로 구성된 이메일 본문을 작성하여 발송합니다. 비동기 메일 발송 처리를 고려합니다.",
+            "details": "'오류 처리 및 제한 사항' 섹션을 추가합니다. 400 Bad Request(잘못된 좌표), 404 Not Found(경로 없음) 등의 케이스를 설명합니다. 또한, 최대 `cutoffSec` 값이나 동시 요청 수 제한과 같은 서비스 제약 조건을 명시합니다.",
             "status": "pending",
-            "testStrategy": "API를 통해 이메일 발송을 요청하고, 지정된 이메일 주소로 PDF 파일이 첨부된 이메일이 정상적으로 수신되는지 확인합니다. 첨부된 PDF 파일이 손상되지 않았고 내용이 올바른지 검증하며, 메일 본문의 내용과 포맷도 확인합니다. 메일 발송 실패 시 적절한 오류 응답이 반환되는지 테스트합니다."
+            "testStrategy": "문서에 설명된 오류를 유발하는 요청(예: 유효하지 않은 `fromPlace` 값 전송)을 보내고, 예상된 HTTP 상태 코드와 메시지가 반환되는지 확인합니다."
           }
         ]
       },
       {
         "id": 10,
-        "title": "운영 환경 보안 및 모니터링 시스템 구축",
-        "description": "API Rate Limiting, 인증, 에러 모니터링, 백업/복구, 성능 대시보드 등 운영 환경의 안정성과 보안을 강화합니다.",
-        "details": "Spring Boot에서 API Key 인증 및 Rate Limiting 미들웨어 적용. Sentry/Prometheus/Grafana 연동하여 에러 및 성능 모니터링. PostgreSQL/Redis 백업 스크립트 작성. Nginx 보안 설정 및 SSL 적용.",
-        "testStrategy": "API 인증/Rate Limiting 시나리오 테스트. 에러 발생 시 알람 및 로그 확인. 백업/복구 시나리오 실행. 성능 대시보드 실시간 모니터링.",
+        "title": "최종 POC 결과 보고서 작성 및 검증",
+        "description": "POC 성공 기준(정상 동작, 성능, 안정성 등)에 대한 최종 결과 보고서 작성 및 검증.",
+        "details": "API 정상 동작, 성능(응답시간, 메모리), 성공률 등 주요 지표를 정리하여 보고서 작성. 모든 테스트 케이스 결과 첨부.",
+        "testStrategy": "보고서 내 모든 성공 기준이 충족되는지, 외부 검증자(PO 등) 확인 절차 포함.",
         "priority": "medium",
         "dependencies": [
-          1,
-          4,
-          6
+          9
         ],
         "status": "pending",
         "subtasks": [
           {
             "id": 1,
-            "title": "Spring Boot API Key 인증 및 Rate Limiting 구현",
-            "description": "Spring Boot 애플리케이션에 API Key를 이용한 인증 메커니즘과 요청량 제한(Rate Limiting) 기능을 추가하여 API 보안을 강화합니다. 이를 통해 무단 접근과 과도한 요청으로부터 API를 보호합니다.",
+            "title": "POC 결과 보고서 목차 및 핵심 지표(KPI) 정의",
+            "description": "보고서의 전체 구조를 설계하고, POC 성공 여부를 판단할 핵심 지표(정상 동작, 성능, 안정성)를 구체적으로 정의합니다.",
             "dependencies": [],
-            "details": "`src/main/java/` 내에 `ApiKeyAuthenticationFilter.java`를 포함한 Spring Security 설정을 구현합니다. `application.yml`에 API Key 목록을 관리하거나 데이터베이스와 연동합니다. Ehcache 또는 Redis 기반으로 Rate Limiting을 구현하고, `WebSecurityConfigurerAdapter`를 통해 필터를 적용합니다.",
+            "details": "보고서에 포함될 섹션(개요, 테스트 환경, 결과 요약, 상세 분석, 결론)을 확정합니다. 성능 지표(평균/95th 응답시간, 메모리 사용량), 안정성 지표(API 성공률, 에러율) 등 측정 기준을 명시합니다.",
             "status": "pending",
-            "testStrategy": "API Key 없이 요청 시 401 Unauthorized 응답, 유효하지 않은 API Key로 요청 시 403 Forbidden 응답, 유효한 API Key로 요청 시 정상 응답을 확인합니다. Rate Limiting 임계값을 초과하여 요청 시 429 Too Many Requests 응답이 오는지 확인합니다."
+            "testStrategy": "정의된 목차와 KPI가 POC 목표를 모두 포함하는지 팀 내부 리뷰 및 PO 확인을 진행합니다."
           },
           {
             "id": 2,
-            "title": "Sentry, Prometheus, Grafana 기반 모니터링 시스템 구축",
-            "description": "Spring Boot 애플리케이션의 에러 모니터링(Sentry), 성능 메트릭 수집(Prometheus), 시각화(Grafana) 시스템을 연동하고 Docker Compose 환경을 설정하여 애플리케이션의 가시성을 확보합니다.",
-            "dependencies": [],
-            "details": "`pom.xml`에 Sentry, Prometheus 클라이언트 라이브러리 의존성을 추가하고, `application.yml`에 Sentry DSN 및 Prometheus endpoint 설정을 추가합니다. Docker Compose 파일에 Sentry, Prometheus, Grafana 서비스를 정의하고 각 서비스가 애플리케이션 메트릭을 수집하고 표시하도록 연동합니다. Grafana 대시보드를 구축합니다.",
+            "title": "성능 및 안정성 테스트 결과 데이터 수집 및 취합",
+            "description": "이전에 수행한 API 성능 테스트(Task 7)와 안정성 테스트(Task 8)의 결과 데이터를 모두 수집하고 정리합니다.",
+            "dependencies": [
+              1
+            ],
+            "details": "부하 테스트 결과 로그(JMeter 등), 서버 모니터링(CPU, 메모리) 데이터, API 호출 성공/실패 로그를 취합하여 분석 가능한 형태로 가공합니다.",
             "status": "pending",
-            "testStrategy": "의도적으로 에러를 발생시켜 Sentry에 에러가 기록되고 알림이 전송되는지 확인합니다. Prometheus `/actuator/prometheus` 엔드포인트에서 메트릭이 정상적으로 수집되는지 확인하고, Grafana 대시보드에서 애플리케이션 성능 지표를 실시간으로 모니터링하며 대시보드 데이터의 정확성을 검증합니다."
+            "testStrategy": "수집된 데이터가 1번에서 정의된 KPI 항목들을 모두 측정할 수 있는지 확인하고, 누락된 데이터가 없는지 검토합니다."
           },
           {
             "id": 3,
-            "title": "PostgreSQL 및 Redis 백업/복구 스크립트 개발",
-            "description": "PostgreSQL 및 Redis 데이터베이스의 데이터를 안전하게 백업하고, 필요한 경우 신속하게 복구할 수 있는 자동화된 쉘 스크립트를 개발하여 데이터 손실 위험을 최소화합니다.",
-            "dependencies": [],
-            "details": "`scripts/` 디렉토리에 `backup_postgresql.sh`, `backup_redis.sh`, `restore_postgresql.sh`, `restore_redis.sh` 스크립트를 작성합니다. `pg_dump`, `redis-cli BGSAVE` 등의 명령어를 활용합니다. 백업 파일의 보관 정책(예: 7일)을 포함하고, `cron`을 이용한 스케줄링 방안을 고려하여 주기적인 백업을 설정합니다.",
+            "title": "결과 보고서 초안 작성 (데이터 분석 및 시각화 포함)",
+            "description": "수집된 데이터를 기반으로 보고서의 본문을 작성합니다. 핵심 지표를 분석하고, 이해하기 쉬운 차트나 표로 시각화하여 포함시킵니다.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "정의된 목차에 따라 각 섹션을 채웁니다. 응답 시간 분포, 메모리 사용량 추이 등을 그래프로 시각화하고, 테스트 결과에 대한 분석 내용을 서술합니다.",
             "status": "pending",
-            "testStrategy": "개발된 백업 스크립트를 실행하여 백업 파일이 정상적으로 생성되고 무결한지 확인합니다. 샘플 데이터를 넣은 후 데이터베이스를 의도적으로 손상시키거나 삭제하고, 복구 스크립트를 실행하여 데이터가 성공적으로 복구되고 애플리케이션에서 정상적으로 접근 가능한지 검증합니다."
+            "testStrategy": "초안이 보고서 목차와 KPI 정의에 부합하는지, 데이터 해석에 오류가 없는지 동료 검토(peer review)를 진행합니다."
           },
           {
             "id": 4,
-            "title": "Nginx SSL 적용 및 웹 서버 보안 강화",
-            "description": "Nginx 웹 서버에 HTTPS(SSL/TLS)를 적용하여 클라이언트-서버 간 통신을 암호화하고, 보안 헤더 및 기타 설정을 통해 웹 서버의 전반적인 보안 수준을 향상시킵니다.",
-            "dependencies": [],
-            "details": "Certbot 또는 수동으로 Let's Encrypt를 사용하여 SSL/TLS 인증서를 발급받고, `nginx/conf.d/isochrone.conf` 또는 `nginx/nginx.conf` 파일에 SSL 설정을 추가합니다. 모든 HTTP 트래픽을 HTTPS로 강제 리다이렉션하도록 설정합니다. HSTS, X-Content-Type-Options, X-Frame-Options, CSP(Content Security Policy) 등의 보안 헤더를 설정하여 웹 취약점을 방어합니다.",
+            "title": "테스트 케이스 및 증빙 자료 취합 및 부록 작성",
+            "description": "보고서의 결론을 뒷받침하는 모든 테스트 케이스의 상세 결과와 관련 로그, 스크린샷 등의 증빙 자료를 취합하여 부록으로 첨부합니다.",
+            "dependencies": [
+              3
+            ],
+            "details": "API 기능 테스트, 성능 테스트, 안정성 테스트 등 모든 테스트 시나리오와 실행 결과를 정리합니다. 원본 로그 파일이나 데이터는 별도 파일로 링크하여 첨부합니다.",
             "status": "pending",
-            "testStrategy": "웹 브라우저를 통해 HTTPS 접속이 정상적으로 이루어지고 주소창에 보안 자물쇠 아이콘이 표시되는지 확인합니다. SSL Labs와 같은 도구를 사용하여 SSL 설정의 유효성과 보안 등급을 점검합니다. 개발자 도구의 네트워크 탭에서 보안 헤더가 올바르게 적용되었는지 확인하고, 비정상적인 HTTP 요청이 HTTPS로 리다이렉션되는지 테스트합니다."
+            "testStrategy": "부록의 모든 자료가 보고서 본문의 내용과 일치하고, 제3자가 보고 내용을 검증할 수 있을 만큼 충분한지 확인합니다."
           },
           {
             "id": 5,
-            "title": "보안 및 모니터링 시스템 통합 테스트 및 운영 가이드 문서화",
-            "description": "구현된 API 인증, Rate Limiting, 모니터링, 백업/복구, Nginx 보안 설정을 통합적으로 테스트하고, 시스템 운영에 필요한 상세한 가이드 문서를 작성하여 안정적인 운영을 지원합니다.",
+            "title": "최종 보고서 검토, 승인 및 공유",
+            "description": "작성 완료된 보고서 초안과 부록을 포함한 최종본을 관련 이해관계자(PO, 팀 리더 등)에게 공유하고, 검토 및 최종 승인을 받습니다.",
             "dependencies": [
-              1,
-              2,
-              3,
               4
             ],
-            "details": "모든 구성 요소가 배포된 환경에서 엔드 투 엔드 테스트 시나리오를 수행하여 각 기능의 상호 연동성을 확인합니다. OWASP ZAP 또는 기타 보안 취약점 스캔 도구를 사용하여 잠재적 문제를 식별하고 보고합니다. 시스템 배포, 설정, 모니터링, 알림, 문제 해결 절차, 백업/복구 절차를 포함하는 상세한 운영 가이드(`docs/operations_guide.md` 등)를 작성합니다.",
+            "details": "검토 과정에서 발생한 피드백을 반영하여 보고서를 수정합니다. 최종 승인 후, 프로젝트 관리 도구(Confluence 등)나 지정된 저장소에 보고서를 업로드하여 공유합니다.",
             "status": "pending",
-            "testStrategy": "모든 보안 기능(인증, Rate Limiting, SSL)이 예상대로 작동하는지 통합 테스트 시나리오를 통해 검증합니다. 모니터링 시스템이 주요 지표와 의도적인 에러를 정확히 포착하여 알림을 발생시키는지 확인합니다. 백업/복구 프로세스 전체를 시뮬레이션하여 데이터 일관성과 복구 시간을 검증하고, 문서화된 가이드에 따라 실제 운영 시나리오를 테스트합니다."
+            "testStrategy": "PO 및 핵심 이해관계자로부터 보고서 내용에 대한 최종 승인(Sign-off)을 득합니다."
           }
         ]
       }
     ],
     "metadata": {
-      "created": "2025-10-12T15:29:55.352Z",
-      "updated": "2025-10-12T15:29:55.352Z",
+      "created": "2025-10-12T16:57:22.917Z",
+      "updated": "2025-10-12T16:57:22.917Z",
       "description": "Tasks for master context"
     }
   }
