@@ -1,0 +1,6 @@
+{
+  "routingDefaults": {
+    "walkSpeed": 1.38,
+    "maxWalkDistance": 1000
+  }
+}

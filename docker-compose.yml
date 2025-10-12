@@ -1,0 +1,11 @@
+services:
+  otp:
+    build: .
+    container_name: otp
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./otp/data:/app/data
+      - ./otp/graphs:/app/graphs
+      - ./otp/config:/app/config
+    command: ["java", "-Xms8G", "-Xmx8G", "-jar", "otp-shaded-2.8.1.jar", "--build", "--serve", "/app/data"]

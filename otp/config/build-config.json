@@ -1,0 +1,16 @@
+{
+  "transportModes": [
+    {
+      "transportMode": "WALK",
+      "speed": 1.38
+    },
+    {
+      "transportMode": "BUS",
+      "speed": 11.11
+    },
+    {
+      "transportMode": "SUBWAY",
+      "speed": 13.88
+    }
+  ]
+}
