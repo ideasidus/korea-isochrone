@@ -50,9 +50,9 @@ node_modules/
 # tasks/
 
 # Data files (large files not suitable for Git)
-data/*.osm
-data/*.gtfs
-data/*.zip
-data/*.pbf
-data/*.xml
-data/*.json 
+otp/data/*.osm
+otp/data/*.gtfs
+otp/data/*.zip
+otp/data/*.pbf
+otp/data/*.xml
+otp/data/*.json 

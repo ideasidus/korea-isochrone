@@ -1,6 +1,6 @@
-# Data Directory
+# OTP Data Directory
 
-This directory is for storing OSM and GTFS data files.
+This directory (`otp/data`) stores the OSM and GTFS input files that are mounted into the OTP container.
 
 ## OSM Data
 Place OpenStreetMap data files (`.osm`, `.pbf`) in this directory.
