@@ -1,4 +1,15 @@
 {
+  "osm": [
+    {
+      "source": "data/south-korea-latest.osm.pbf"
+    }
+  ],
+  "transitFeeds": [
+    {
+      "type": "gtfs",
+      "source": "data/south-korea-gtfs.zip"
+    }
+  ],
   "transportModes": [
     {
       "transportMode": "WALK",
