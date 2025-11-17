@@ -1,0 +1,13 @@
+services:
+  graph-builder:
+    image: opentripplanner/opentripplanner:2.8.1
+    container_name: otp-builder
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms12G -Xmx16G
+    deploy:
+      resources:
+        limits:
+          memory: 24G
+    volumes:
+      - ./:/var/opentripplanner
+    command: ["--build", "--save"]
