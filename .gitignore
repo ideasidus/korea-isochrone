@@ -54,3 +54,4 @@ otp/data/*.osm
 otp/data/*.gtfs
 otp/data/*.zip
 otp/data/*.pbf
+otp/graph.obj
