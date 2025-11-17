@@ -2,8 +2,6 @@ services:
   otp:
     image: opentripplanner/opentripplanner:2.8.1
     container_name: otp
-    ports:
-      - "8080:8080"
     environment:
       - JAVA_TOOL_OPTIONS=-Xms8G -Xmx12G
     deploy:
@@ -13,16 +11,22 @@ services:
     volumes:
       - ./otp:/var/opentripplanner
     command: ["--load", "--serve"]
+    networks:
+      - isochrone-internal
 
-  graph-builder:
-    image: opentripplanner/opentripplanner:2.8.1
-    container_name: otp-builder
+  backend:
+    build:
+      context: ./backend-java
+      dockerfile: Dockerfile
+    container_name: backend-java
     environment:
-      - JAVA_TOOL_OPTIONS=-Xms12G -Xmx16G
-    deploy:
-      resources:
-        limits:
-          memory: 24G
-    volumes:
-      - ./otp:/var/opentripplanner
-    command: ["--build", "--save"]
+      - OTP_API_BASE_URL=http://otp:8080
+      - SPRING_PROFILES_ACTIVE=default
+    depends_on:
+      - otp
+    networks:
+      - isochrone-internal
+
+networks:
+  isochrone-internal:
+    driver: bridge
