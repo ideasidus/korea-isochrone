@@ -5,7 +5,24 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - JAVA_TOOL_OPTIONS=-Xms8G -Xmx8G
+      - JAVA_TOOL_OPTIONS=-Xms8G -Xmx12G
+    deploy:
+      resources:
+        limits:
+          memory: 16G
     volumes:
       - ./otp:/var/opentripplanner
-    command: ["--build", "--serve"]
+    command: ["--load", "--serve"]
+
+  graph-builder:
+    image: opentripplanner/opentripplanner:2.8.1
+    container_name: otp-builder
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms12G -Xmx16G
+    deploy:
+      resources:
+        limits:
+          memory: 24G
+    volumes:
+      - ./otp:/var/opentripplanner
+    command: ["--build", "--save"]
