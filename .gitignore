@@ -35,6 +35,11 @@ yarn-error.log*
 dev-debug.log
 # Dependency directories
 node_modules/
+backend-java/target/
+backend-java/.idea/
+backend-java/.mvn/
+backend-java/.gradle/
+backend-java/build/
 # Editor directories and files
 .idea
 .vscode
