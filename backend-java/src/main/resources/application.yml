@@ -1,0 +1,10 @@
+server:
+  port: 8081
+
+logging:
+  level:
+    com.koreaiso.isochrone: INFO
+
+otp:
+  api:
+    base-url: http://otp:8080
