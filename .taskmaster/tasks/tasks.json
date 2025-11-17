@@ -90,7 +90,7 @@
         "dependencies": [
           "1"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -166,7 +166,7 @@
         "dependencies": [
           "2"
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -233,79 +233,70 @@
       },
       {
         "id": 4,
-        "title": "Isochrone REST API 엔드포인트 구현",
-        "description": "OTP 내장 REST API(/otp/routers/default/isochrone) 엔드포인트를 외부에서 호출할 수 있도록 설정 및 문서화합니다.",
-        "details": "OTP의 isochrone API 엔드포인트를 활성화하고, 필요한 쿼리 파라미터(fromPlace, cutoffSec, mode 등)를 명확히 문서화합니다. Docker 네트워크 및 포트 설정을 통해 외부 접근 허용.",
-        "testStrategy": "curl 또는 Postman으로 /isochrone 엔드포인트에 요청하여 GeoJSON Polygon 응답이 정상적으로 반환되는지 확인.",
-        "priority": "high",
+        "title": "Spring Boot 백엔드 기반 Isochrone API 래퍼 구현",
+        "description": "Spring Boot 애플리케이션에 `/api/isochrone` 엔드포인트를 구현합니다. 이 엔드포인트는 내부적으로 OTP의 isochrone API를 호출하고 결과를 반환하는 래퍼(wrapper) 역할을 합니다.",
+        "status": "pending",
         "dependencies": [
           "3"
         ],
-        "status": "pending",
+        "priority": "high",
+        "details": "Spring Boot `RestController`를 사용하여 `/api/isochrone` 엔드포인트를 생성합니다. `WebClient` 또는 `RestTemplate`을 사용하여 Docker 네트워크 내의 OTP 서비스(`http://otp:8080/otp/routers/default/isochrone`)를 호출합니다. OTP 연동을 위한 서비스 레이어와 클라이언트를 분리하고, OTP 호출 실패 시 적절한 예외 처리 및 로깅을 추가합니다.",
+        "testStrategy": "Postman 또는 `curl`을 사용하여 새로 구현된 Spring Boot 백엔드의 `/api/isochrone` 엔드포인트를 호출하고, OTP로부터 전달받은 GeoJSON Polygon 응답이 정상적으로 반환되는지 확인합니다.",
         "subtasks": [
           {
             "id": 1,
             "title": "docker-compose.yml OTP 서비스 포트(8080) 노출 설정",
-            "description": "docker-compose.yml 파일에서 주석 처리된 'ports' 설정을 활성화하여 OTP 컨테이너의 8080 포트를 호스트 머신에 바인딩합니다. 이를 통해 외부에서 OTP API에 접근할 수 있는 기본 통로를 마련합니다.",
+            "description": "docker-compose.yml 파일에서 주석 처리된 'ports' 설정을 활성화하여 OTP 컨테이너의 8080 포트를 호스트 머신에 바인딩합니다. 이는 백엔드 개발 및 E2E 테스트 시 호스트에서 OTP API에 직접 접근하여 동작을 확인하는 데 사용됩니다.",
+            "status": "pending",
             "dependencies": [],
             "details": "docker-compose.yml 파일의 otp 서비스 정의에서 'ports: - \"8080:8080\"' 라인의 주석을 제거하고 'docker-compose up -d --build' 명령어로 서비스를 재시작합니다.",
-            "status": "pending",
-            "testStrategy": "`docker ps` 명령어를 실행하여 otp 컨테이너의 PORTS 항목에 '0.0.0.0:8080->8080/tcp'와 같이 포트 포워딩이 정상적으로 설정되었는지 확인합니다.",
-            "parentId": "undefined"
+            "testStrategy": "`docker ps` 명령어를 실행하여 otp 컨테이너의 PORTS 항목에 '0.0.0.0:8080->8080/tcp'와 같이 포트 포워딩이 정상적으로 설정되었는지 확인합니다."
           },
           {
             "id": 2,
-            "title": "Docker 컨테이너 내부에서 Isochrone API 동작 검증",
-            "description": "`docker exec`를 사용하여 실행 중인 OTP 컨테이너에 접속한 후, `curl` 명령어로 `localhost:8080`의 isochrone 엔드포인트가 정상적으로 응답하는지 확인합니다. 이는 네트워크 문제가 아닌 OTP 애플리케이션 자체의 동작을 검증하기 위함입니다.",
-            "dependencies": [
-              1
-            ],
-            "details": "`docker exec -it <otp_container_name> /bin/bash` 명령어로 컨테이너에 접속한 후, `curl \"http://localhost:8080/otp/routers/default/isochrone?fromPlace=37.5665,126.9780&mode=WALK&cutoffSec=600\"` 와 같은 명령어로 API 응답을 확인합니다.",
+            "title": "Spring Boot 백엔드 프로젝트 초기 설정 및 의존성 추가",
+            "description": "Spring Initializr 등을 사용하여 새로운 Spring Boot 모듈 또는 프로젝트를 생성합니다. 웹 요청 처리를 위한 `spring-boot-starter-web`과, HTTP 클라이언트 구현을 위한 `spring-boot-starter-webflux`(WebClient) 의존성을 `pom.xml` 또는 `build.gradle`에 추가합니다.",
             "status": "pending",
-            "testStrategy": "curl 요청 시 HTTP 200 OK 상태 코드와 함께 GeoJSON 형식의 응답 본문(geometry type: Polygon)이 반환되는지 확인합니다.",
-            "parentId": "undefined"
+            "dependencies": [],
+            "details": "새로운 백엔드 애플리케이션을 `backend` 디렉토리에 구성하고, `docker-compose.yml`에 해당 백엔드를 서비스로 추가하여 OTP 컨테이너와 동일한 네트워크에서 통신할 수 있도록 설정합니다.",
+            "testStrategy": "프로젝트 빌드 후 애플리케이션을 실행하여 기본 상태(예: health check 엔드포인트)가 정상적으로 응답하는지 확인합니다."
           },
           {
             "id": 3,
-            "title": "Nginx 리버스 프록시를 이용한 API 엔드포인트 구성",
-            "description": "외부 요청(`/api/isochrone`)을 내부 OTP 서비스(`/otp/routers/default/isochrone`)로 전달하는 Nginx 리버스 프록시를 설정합니다. 이를 위해 `docker-compose.yml`에 Nginx 서비스를 추가하고 관련 설정 파일을 작성합니다.",
-            "dependencies": [
-              1
-            ],
-            "details": "`nginx/default.conf` 파일을 생성하고 `location /api/isochrone { ... }` 블록 내에 `proxy_pass http://otp:8080/otp/routers/default/isochrone;` 설정을 추가합니다. `docker-compose.yml`에 nginx 서비스를 정의하고 호스트의 80 포트와 연결합니다.",
+            "title": "Isochrone API 컨트롤러 및 서비스 레이어 구현",
+            "description": "`@RestController`를 사용하여 `/api/isochrone` 엔드포인트를 처리하는 `IsochroneController`를 작성합니다. 요청 파라미터(`fromPlace`, `cutoffSec` 등)를 받아 `IsochroneService`로 전달합니다. `IsochroneService`는 비즈니스 로직을 담당하며, 내부적으로 OTP 클라이언트를 호출합니다.",
             "status": "pending",
-            "testStrategy": "Nginx 컨테이너 로그를 확인하여 `/api/isochrone` 요청이 `http://otp:8080/...`으로 정상적으로 프록시 패스되는지 검증합니다.",
-            "parentId": "undefined"
-          },
-          {
-            "id": 4,
-            "title": "Isochrone API 명세서 작성 (요청 파라미터 및 응답)",
-            "description": "API 사용에 필요한 필수 및 선택 쿼리 파라미터(fromPlace, cutoffSec, mode, date, time 등)를 정의하고, 각 파라미터의 형식과 예시를 포함한 문서를 작성합니다. 또한, 성공 시 반환되는 GeoJSON 응답의 구조를 설명합니다.",
             "dependencies": [
               2
             ],
-            "details": "README.md 파일에 'API Usage' 섹션을 추가하여 엔드포인트 URL, HTTP 메서드, 각 쿼리 파라미터의 설명, 데이터 타입, 필수 여부를 표 형식으로 정리합니다. Postman 또는 curl을 사용한 요청 예시와 샘플 응답 GeoJSON을 포함합니다.",
+            "details": "`IsochroneController.java`와 `IsochroneService.java` 파일을 생성합니다. 컨트롤러에서는 `@RequestParam`을 사용하여 쿼리 파라미터를 받고, 서비스 레이어에서는 DTO(Data Transfer Object)를 사용하여 데이터를 전달하는 구조를 적용합니다.",
+            "testStrategy": "단위 테스트(Unit Test)를 통해 컨트롤러가 요청을 올바르게 서비스 레이어로 전달하는지 검증합니다. Mockito를 사용하여 서비스의 의존성을 격리합니다."
+          },
+          {
+            "id": 4,
+            "title": "OTP API 연동 클라이언트 구현 및 예외 처리",
+            "description": "`WebClient` 또는 `RestTemplate`을 사용하여 Docker 네트워크상의 OTP 서비스(`http://otp:8080/otp/routers/default/isochrone`)를 호출하는 `OtpClient` 컴포넌트를 구현합니다. OTP 서버의 응답이 없거나 오류(5xx, 4xx)가 발생했을 때, 커스텀 예외를 발생시키고 에러 로그를 기록하는 등 견고한 예외 처리 로직을 추가합니다.",
             "status": "pending",
-            "testStrategy": "작성된 문서의 샘플 요청(curl)을 복사하여 터미널에서 실행했을 때, 문서에 명시된 샘플 응답과 동일한 구조의 결과가 반환되는지 확인합니다.",
-            "parentId": "undefined"
+            "dependencies": [
+              2
+            ],
+            "details": "`@Component` 어노테이션을 사용하여 `OtpClient.java`를 생성합니다. `application.yml` 또는 `application.properties`에 OTP 서버의 주소(`otp.api.url=http://otp:8080`)를 설정하고 `@Value`로 주입받아 사용합니다. OTP 통신 실패 시 `OtpClientException`과 같은 커스텀 예외를 정의하여 사용합니다.",
+            "testStrategy": "WireMock 또는 MockWebServer를 사용하여 OTP API를 모킹(mocking)하고, 클라이언트가 성공, 실패, 타임아웃 등 다양한 시나리오에서 올바르게 동작하는지 단위 테스트로 검증합니다."
           },
           {
             "id": 5,
-            "title": "외부에서 Nginx를 통한 End-to-End Isochrone API 호출 테스트",
-            "description": "호스트 머신이나 Postman과 같은 외부 클라이언트에서 Nginx가 노출하는 엔드포인트(예: `http://localhost/api/isochrone`)를 호출하여 전체 API 요청-응답 흐름이 정상적으로 동작하는지 최종 검증합니다.",
+            "title": "백엔드 API E2E 테스트 및 문서화",
+            "description": "Postman 또는 `curl`을 사용하여 로컬에서 실행된 백엔드 애플리케이션의 `/api/isochrone` 엔드포인트를 직접 호출합니다. `docker-compose`로 모든 서비스(otp, backend)가 실행 중인 상태에서, 요청이 백엔드를 거쳐 OTP까지 전달되고 최종 응답이 클라이언트에게 성공적으로 반환되는지 End-to-End 흐름을 검증합니다. `README.md`에 새로운 API 엔드포인트, 파라미터, 사용 예시를 업데이트합니다.",
+            "status": "pending",
             "dependencies": [
+              1,
               3,
               4
             ],
-            "details": "Postman 또는 curl을 사용하여 `http://localhost/api/isochrone?fromPlace=37.5665,126.9780&mode=TRANSIT&cutoffSec=1800` 와 같은 실제 사용 예시 요청을 보내고, 유효한 GeoJSON 폴리곤이 반환되는지 확인합니다.",
-            "status": "pending",
-            "testStrategy": "다양한 `cutoffSec` 및 `mode` 파라미터 값으로 API를 요청하고, 예상되는 구조의 GeoJSON 응답이 정상적으로 수신되는지 확인합니다. 또한, 잘못된 파라미터로 요청 시 적절한 HTTP 오류 코드가 반환되는지 확인합니다.",
-            "parentId": "undefined"
+            "details": "Postman 또는 curl을 사용하여 `http://localhost:8081/api/isochrone?fromPlace=37.5665,126.9780&mode=TRANSIT&cutoffSec=1800` (백엔드 포트가 8081일 경우)와 같은 실제 사용 예시 요청을 보내고, 유효한 GeoJSON 폴리곤이 반환되는지 확인합니다. README.md에 API 사용법 섹션을 추가/수정합니다.",
+            "testStrategy": "실제 좌표와 파라미터로 API를 호출하여 유효한 GeoJSON 응답을 받는지 확인합니다. 잘못된 파라미터(예: `fromPlace` 누락)를 보냈을 때 백엔드가 정의한 400 Bad Request와 같은 오류 응답이 반환되는지 확인합니다."
           }
-        ],
-        "complexity": 6,
-        "recommendedSubtasks": 5,
-        "expansionPrompt": "Docker Compose에서 OTP 서비스 포트 노출 설정, 컨테이너 내 Isochrone API 동작 검증, Nginx 리버스 프록시 구성, API 명세서 작성, 그리고 외부에서의 End-to-End API 호출 테스트 단계를 더 상세히 정의할 수 있습니다."
+        ]
       },
       {
         "id": 5,
@@ -758,6 +749,74 @@
         "complexity": 6,
         "recommendedSubtasks": 5,
         "expansionPrompt": "POC 결과 보고서 목차 및 핵심 지표 정의, 성능 및 안정성 테스트 결과 데이터 수집 및 취합, 결과 보고서 초안 작성 (데이터 분석 및 시각화 포함), 테스트 케이스 및 증빙 자료 취합 및 부록 작성, 그리고 최종 보고서 검토, 승인 및 공유 단계를 더 상세히 정의할 수 있습니다."
+      },
+      {
+        "id": 11,
+        "title": "Isochrone 데모용 간단한 프런트엔드 구축",
+        "description": "React/Vite 기반의 프런트엔드 애플리케이션을 `frontend` 디렉토리에 구축하여, 백엔드의 `/api/isochrone` 엔드포인트를 호출하고 결과를 텍스트로 시각화합니다.",
+        "details": "Vite를 사용하여 `frontend` 디렉토리에 새로운 React(TypeScript) 프로젝트를 생성합니다 (`npm create vite@latest frontend -- --template react-ts`). API 요청 파라미터(`fromPlace`, `cutoffSec`, `mode` 등)를 입력받는 폼 컴포넌트를 구현하고, `useState` 훅으로 로딩/성공/에러 상태를 관리합니다. `axios` 또는 `fetch`를 사용하여 백엔드 API를 호출하는 클라이언트 로직을 작성합니다. 성공 시 응답으로 받은 GeoJSON 데이터를 `<pre>` 태그로 화면에 렌더링하고, GeoJSON을 파일로 다운로드하는 버튼을 추가합니다. 에러 발생 시 메시지를 표시합니다. 프로젝트 루트에 `.env` 파일을 생성하고 `VITE_API_BASE_URL=http://localhost:8080`과 같이 백엔드 URL을 환경 변수로 주입하며, 코드 내에서는 `import.meta.env.VITE_API_BASE_URL`로 참조합니다. 마지막으로, 최상위 `README.md` 파일에 'Frontend' 섹션을 추가하여 실행 방법(`npm install`, `npm run dev`)과 사용 예시를 문서화합니다.",
+        "testStrategy": "1. `npm run dev` 명령어로 프런트엔드 개발 서버가 정상적으로 실행되는지 확인합니다.\n2. 입력 폼에 유효한 값(예: `fromPlace`: '37.5042,127.0245', `cutoffSec`: 1800)을 입력하고 요청 시 로딩 상태가 표시되는지 확인합니다.\n3. API 호출 성공 시, 백엔드로부터 받은 GeoJSON 응답이 텍스트 영역에 올바르게 표시되고 '다운로드' 버튼이 정상 동작하는지 검증합니다.\n4. 의도적으로 잘못된 파라미터를 입력하거나 백엔드 서버를 중지시킨 상태에서 API를 호출하여, 에러 메시지가 정상적으로 표시되는지 확인합니다.\n5. `.env` 파일의 `VITE_API_BASE_URL` 값을 변경했을 때, 프런트엔드가 변경된 URL로 API를 호출하는지 브라우저 개발자 도구의 네트워크 탭에서 확인합니다.",
+        "status": "pending",
+        "dependencies": [
+          6
+        ],
+        "priority": "medium",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "React/Vite 프로젝트 초기 설정 및 환경 구성",
+            "description": "`frontend` 디렉토리에 Vite를 사용하여 새로운 React(TypeScript) 프로젝트를 생성하고, API 통신을 위한 `axios`를 설치합니다. 또한, 백엔드 API 주소를 관리하기 위한 환경 변수 파일을 생성하고, 버전 관리에서 제외되도록 `.gitignore`를 설정합니다.",
+            "dependencies": [],
+            "details": "1. 프로젝트 루트에서 `npm create vite@latest frontend -- --template react-ts` 명령어를 실행하여 `frontend` 디렉토리에 React/TS 프로젝트를 생성합니다.\n2. `cd frontend`로 이동한 후, `npm install axios`를 실행하여 HTTP 클라이언트를 설치합니다.\n3. 프로젝트 루트 디렉토리(최상위)에 `.env` 파일을 생성하고 `VITE_API_BASE_URL=http://localhost:8080` 내용을 추가합니다.\n4. 최상위 `.gitignore` 파일에 `frontend/node_modules`, `frontend/dist`, `.env*` 항목이 없다면 추가하여 버전 관리에서 제외시킵니다.",
+            "status": "pending",
+            "testStrategy": "1. `cd frontend` 후 `npm install` 및 `npm run dev` 명령어로 Vite 개발 서버가 정상적으로 실행되는지 확인합니다.\n2. `src/App.tsx` 파일 내에서 `console.log(import.meta.env.VITE_API_BASE_URL);` 코드를 추가하여 브라우저 콘솔에 `http://localhost:8080`이 출력되는지 확인합니다."
+          },
+          {
+            "id": 2,
+            "title": "API 요청 파라미터 입력 폼 컴포넌트 구현",
+            "description": "사용자가 Isochrone 생성을 위해 필요한 파라미터(`fromPlace`, `cutoffSec`, `mode`)를 입력할 수 있는 UI 폼을 구현합니다. 각 입력 필드의 상태는 `useState` 훅을 사용하여 관리합니다.",
+            "dependencies": [
+              "11.1"
+            ],
+            "details": "1. `frontend/src/components` 디렉토리를 생성하고, `IsochroneForm.tsx` 파일을 만듭니다.\n2. `IsochroneForm.tsx` 내에 `fromPlace`(text), `cutoffSec`(number), `mode`(select: WALK, BICYCLE, TRANSIT)를 위한 `<input>` 및 `<select>` 태그를 포함하는 폼을 작성합니다.\n3. `App.tsx`에서 각 입력 필드에 대한 상태(e.g., `const [fromPlace, setFromPlace] = useState('37.5042,127.0245');`)를 `useState`로 정의하고, 이를 `IsochroneForm` 컴포넌트에 props로 전달하여 제어 컴포넌트로 구현합니다.\n4. 폼 제출(submit) 이벤트가 발생했을 때 호출될 함수를 props로 전달받도록 설계합니다.",
+            "status": "pending",
+            "testStrategy": "1. `npm run dev`로 앱을 실행하고, 폼이 화면에 올바르게 렌더링되는지 확인합니다.\n2. 각 입력 필드에 값을 입력하거나 변경했을 때, 컴포넌트의 상태가 정상적으로 업데이트되는지 React DevTools를 사용해 확인합니다.\n3. '요청' 버튼 클릭 시, 폼 제출 이벤트 핸들러가 정상적으로 호출되는지 `console.log`로 확인합니다."
+          },
+          {
+            "id": 3,
+            "title": "백엔드 API 호출 및 상태 관리 로직 작성",
+            "description": "폼 제출 시 백엔드의 `/api/isochrone` 엔드포인트를 호출하는 비동기 함수를 작성합니다. API 요청의 생명주기(로딩, 성공, 에러)를 관리하기 위해 `useState` 훅을 사용하여 상태를 관리합니다.",
+            "dependencies": [
+              "11.1",
+              "11.2"
+            ],
+            "details": "1. `App.tsx` 컴포넌트에 API 응답 데이터, 로딩 상태, 에러 상태를 관리할 `useState` 훅을 추가합니다. (e.g., `const [geojsonData, setGeojsonData] = useState(null);`, `const [isLoading, setIsLoading] = useState(false);`, `const [error, setError] = useState(null);`)\n2. 폼 제출 시 실행될 `handleFetchIsochrone` 함수를 비동기(async/await)로 작성합니다.\n3. 함수 내부에서 `setIsLoading(true)`로 로딩 상태를 시작하고, `try...catch` 블록을 사용합니다.\n4. `try` 블록에서 `axios.get` 또는 `fetch`를 사용하여 `import.meta.env.VITE_API_BASE_URL`과 `/api/isochrone` 경로를 조합하고, 폼 상태 값을 쿼리 파라미터로 전달하여 API를 호출합니다.\n5. 호출 성공 시, 응답 데이터를 `geojsonData` 상태에 저장하고, `catch` 블록에서는 발생한 에러를 `error` 상태에 저장합니다. `finally` 블록에서 `setIsLoading(false)`로 로딩 상태를 종료합니다.",
+            "status": "pending",
+            "testStrategy": "1. 백엔드 서버가 실행 중인 상태에서 폼을 제출했을 때, 브라우저의 네트워크 탭에서 `/api/isochrone` 요청이 정상적으로 전송되는지 확인합니다.\n2. 요청이 진행되는 동안 '로딩 중...'과 같은 메시지가 표시되는지 확인합니다.\n3. 의도적으로 백엔드 서버를 중지시키거나 잘못된 파라미터를 보내 API 요청이 실패했을 때, 에러 상태가 올바르게 설정되고 에러 메시지가 표시되는지 확인합니다."
+          },
+          {
+            "id": 4,
+            "title": "API 응답 결과 시각화 및 다운로드 기능 구현",
+            "description": "API 호출이 성공했을 때, 응답으로 받은 GeoJSON 데이터를 화면에 텍스트 형태로 표시하고, 해당 데이터를 `.geojson` 파일로 다운로드할 수 있는 버튼을 구현합니다.",
+            "dependencies": [
+              "11.3"
+            ],
+            "details": "1. `App.tsx`의 JSX 영역에서 `geojsonData` 상태 값이 존재할 경우에만 `<pre>` 태그를 사용하여 `JSON.stringify(geojsonData, null, 2)` 결과를 렌더링하도록 조건부 렌더링을 추가합니다.\n2. `geojsonData`가 있을 때 'GeoJSON 다운로드' 버튼을 함께 표시합니다.\n3. 다운로드 버튼의 `onClick` 이벤트 핸들러 함수를 작성합니다. 이 함수는 `geojsonData`를 문자열로 변환한 후, `Blob` 객체를 생성하고, `URL.createObjectURL`을 사용하여 임시 URL을 만듭니다. 그 다음, `<a>` 태그를 동적으로 생성하여 `href`와 `download` 속성을 설정하고 클릭 이벤트를 발생시켜 파일 다운로드를 트리거합니다.",
+            "status": "pending",
+            "testStrategy": "1. API 요청 성공 후, 응답받은 GeoJSON 데이터가 `<pre>` 태그 안에 포맷에 맞게 예쁘게 출력되는지 확인합니다.\n2. 'GeoJSON 다운로드' 버튼을 클릭했을 때, `isochrone.geojson`과 같은 이름으로 파일이 정상적으로 다운로드되는지 확인합니다.\n3. 다운로드된 파일을 텍스트 편집기나 QGIS 같은 GIS 툴에서 열었을 때, 내용이 유효한 GeoJSON 형식인지 확인합니다."
+          },
+          {
+            "id": 5,
+            "title": "프로젝트 README 문서 업데이트",
+            "description": "프로젝트의 최상위 `README.md` 파일에 'Frontend' 섹션을 추가하여, 프런트엔드 애플리케이션의 설치 방법, 실행 방법 및 간단한 사용 예시를 명확하게 문서화합니다.",
+            "dependencies": [
+              "11.1"
+            ],
+            "details": "1. 프로젝트 루트의 `README.md` 파일을 엽니다.\n2. '## Frontend' 섹션을 새로 추가합니다.\n3. 하위 섹션으로 '### 설치 (Installation)'와 '### 실행 (Running the dev server)'을 만듭니다.\n4. 설치 섹션에는 `cd frontend` 후 `npm install`을 실행하라는 안내를 작성합니다.\n5. 실행 섹션에는 `npm run dev` 명령어로 개발 서버를 시작하고, 브라우저에서 `http://localhost:5173` (또는 Vite가 지정한 포트)으로 접속하라는 안내를 작성합니다.\n6. 간단한 사용법(폼 입력 및 요청 버튼 클릭)에 대한 설명을 추가합니다.",
+            "status": "pending",
+            "testStrategy": "1. `README.md` 파일을 열어 'Frontend' 섹션이 명확하고 이해하기 쉽게 작성되었는지 검토합니다.\n2. 다른 팀원이 문서를 보고 프런트엔드 애플리케이션을 독립적으로 설치하고 실행할 수 있는지 확인합니다."
+          }
+        ]
       }
     ],
     "metadata": {
@@ -770,7 +829,7 @@
       ],
       "created": "2025-11-15T08:57:00.336Z",
       "description": "Tasks for master context",
-      "updated": "2025-11-15T09:12:03.352Z"
+      "updated": "2025-11-17T15:08:28.711Z"
     }
   }
 }
