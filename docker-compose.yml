@@ -14,13 +14,13 @@ services:
     networks:
       - isochrone-internal
 
-  backend:
+  backend-java:
     build:
       context: ./backend-java
       dockerfile: Dockerfile
     container_name: backend-java
     environment:
-      - OTP_API_BASE_URL=http://otp:8080
+      - OTP_API_BASE_URL=http://otp:8080/otp
       - SPRING_PROFILES_ACTIVE=default
     depends_on:
       - otp
@@ -30,3 +30,4 @@ services:
 networks:
   isochrone-internal:
     driver: bridge
+    name: isochrone-internal

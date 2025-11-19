@@ -7,4 +7,4 @@ logging:
 
 otp:
   api:
-    base-url: http://otp:8080
+    base-url: http://otp:8080/otp

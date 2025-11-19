@@ -247,16 +247,16 @@
             "id": 1,
             "title": "docker-compose.yml OTP 서비스 포트(8080) 노출 설정",
             "description": "docker-compose.yml 파일에서 주석 처리된 'ports' 설정을 활성화하여 OTP 컨테이너의 8080 포트를 호스트 머신에 바인딩합니다. 이는 백엔드 개발 및 E2E 테스트 시 호스트에서 OTP API에 직접 접근하여 동작을 확인하는 데 사용됩니다.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
-            "details": "docker-compose.yml 파일의 otp 서비스 정의에서 'ports: - \"8080:8080\"' 라인의 주석을 제거하고 'docker-compose up -d --build' 명령어로 서비스를 재시작합니다.",
+            "details": "docker-compose.yml 파일의 otp 서비스 정의에서 'ports: - \"8080:8080\"' 라인의 주석을 제거하고 'docker-compose up -d --build' 명령어로 서비스를 재시작합니다.\n<info added on 2025-11-17T15:39:53.368Z>\n기존 계획을 변경하여, OTP 서비스의 포트를 호스트에 직접 노출하지 않도록 했습니다. 대신 `docker-compose.yml`에 `isochrone-internal`이라는 공용 네트워크를 생성하고, `otp`, `backend`, `graph-builder` 서비스가 이 네트워크를 사용하도록 설정했습니다. 이 변경으로 인해 서비스들은 Docker 네트워크 내에서 서비스 이름(예: `http://otp:8080`)을 통해 서로 통신하게 됩니다. 호스트에는 `backend` 서비스의 8080 포트만 노출되어, 서비스 간 통신은 격리되고 외부 접근은 백엔드 API로 단일화됩니다.\n</info added on 2025-11-17T15:39:53.368Z>",
             "testStrategy": "`docker ps` 명령어를 실행하여 otp 컨테이너의 PORTS 항목에 '0.0.0.0:8080->8080/tcp'와 같이 포트 포워딩이 정상적으로 설정되었는지 확인합니다."
           },
           {
             "id": 2,
             "title": "Spring Boot 백엔드 프로젝트 초기 설정 및 의존성 추가",
             "description": "Spring Initializr 등을 사용하여 새로운 Spring Boot 모듈 또는 프로젝트를 생성합니다. 웹 요청 처리를 위한 `spring-boot-starter-web`과, HTTP 클라이언트 구현을 위한 `spring-boot-starter-webflux`(WebClient) 의존성을 `pom.xml` 또는 `build.gradle`에 추가합니다.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [],
             "details": "새로운 백엔드 애플리케이션을 `backend` 디렉토리에 구성하고, `docker-compose.yml`에 해당 백엔드를 서비스로 추가하여 OTP 컨테이너와 동일한 네트워크에서 통신할 수 있도록 설정합니다.",
             "testStrategy": "프로젝트 빌드 후 애플리케이션을 실행하여 기본 상태(예: health check 엔드포인트)가 정상적으로 응답하는지 확인합니다."
@@ -265,7 +265,7 @@
             "id": 3,
             "title": "Isochrone API 컨트롤러 및 서비스 레이어 구현",
             "description": "`@RestController`를 사용하여 `/api/isochrone` 엔드포인트를 처리하는 `IsochroneController`를 작성합니다. 요청 파라미터(`fromPlace`, `cutoffSec` 등)를 받아 `IsochroneService`로 전달합니다. `IsochroneService`는 비즈니스 로직을 담당하며, 내부적으로 OTP 클라이언트를 호출합니다.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               2
             ],
@@ -276,7 +276,7 @@
             "id": 4,
             "title": "OTP API 연동 클라이언트 구현 및 예외 처리",
             "description": "`WebClient` 또는 `RestTemplate`을 사용하여 Docker 네트워크상의 OTP 서비스(`http://otp:8080/otp/routers/default/isochrone`)를 호출하는 `OtpClient` 컴포넌트를 구현합니다. OTP 서버의 응답이 없거나 오류(5xx, 4xx)가 발생했을 때, 커스텀 예외를 발생시키고 에러 로그를 기록하는 등 견고한 예외 처리 로직을 추가합니다.",
-            "status": "pending",
+            "status": "done",
             "dependencies": [
               2
             ],
@@ -293,7 +293,7 @@
               3,
               4
             ],
-            "details": "Postman 또는 curl을 사용하여 `http://localhost:8081/api/isochrone?fromPlace=37.5665,126.9780&mode=TRANSIT&cutoffSec=1800` (백엔드 포트가 8081일 경우)와 같은 실제 사용 예시 요청을 보내고, 유효한 GeoJSON 폴리곤이 반환되는지 확인합니다. README.md에 API 사용법 섹션을 추가/수정합니다.",
+            "details": "Postman 또는 curl을 사용하여 `http://localhost:8081/api/isochrone?fromPlace=37.5665,126.9780&mode=TRANSIT&cutoffSec=1800` (백엔드 포트가 8081일 경우)와 같은 실제 사용 예시 요청을 보내고, 유효한 GeoJSON 폴리곤이 반환되는지 확인합니다. README.md에 API 사용법 섹션을 추가/수정합니다.\n<info added on 2025-11-17T15:40:41.055Z>\n사용자 피드백 반영: 백엔드 포트는 `8081`이 아닌 `8080`을 사용합니다. Postman/curl 테스트 시 사용할 예시 URL을 `http://localhost:8080/api/isochrone?fromPlace=37.5665,126.9780&mode=TRANSIT&cutoffSec=1800`로 수정합니다. `README.md` 문서 업데이트 시에도 `8080` 포트를 기준으로 작성합니다. E2E 테스트는 `docker-compose` 환경에서 외부로 노출된 `backend` 서비스(`localhost:8080`)를 대상으로 하며, `backend`가 내부 네트워크를 통해 OTP 서비스와 통신하는 흐름을 검증합니다.\n</info added on 2025-11-17T15:40:41.055Z>",
             "testStrategy": "실제 좌표와 파라미터로 API를 호출하여 유효한 GeoJSON 응답을 받는지 확인합니다. 잘못된 파라미터(예: `fromPlace` 누락)를 보냈을 때 백엔드가 정의한 400 Bad Request와 같은 오류 응답이 반환되는지 확인합니다."
           }
         ]
@@ -829,7 +829,7 @@
       ],
       "created": "2025-11-15T08:57:00.336Z",
       "description": "Tasks for master context",
-      "updated": "2025-11-17T15:08:28.711Z"
+      "updated": "2025-11-17T15:40:13.297Z"
     }
   }
 }
