@@ -1,0 +1,19 @@
+[project]
+name = "korea-isochrone-backend"
+version = "0.1.0"
+description = "FastAPI wrapper for OpenTripPlanner isochrone endpoints"
+authors = [{ name = "korea-isochrone" }]
+requires-python = ">=3.13,<4.0"
+dependencies = [
+    "fastapi>=0.115.0",
+    "httpx>=0.27.2",
+    "uvicorn[standard]>=0.30.6",
+    "pydantic-settings>=2.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.3",
+    "pytest-asyncio>=0.23.8",
+    "respx>=0.21.1",
+]

@@ -10,7 +10,7 @@ cd backend-java
 ./gradlew bootRun
 ```
 
-Docker Compose 환경에서는 `backend-java` 서비스가 자동으로 빌드되고 실행되지만, 기본 설정에서는 외부 포트를 노출하지 않습니다. 필요 시 compose override를 사용하거나 로컬에서 직접 `bootRun`을 실행하여 접근하세요.
+Docker Compose 환경에서는 `backend-java-springboot` 서비스가 자동으로 빌드되고 실행되지만, 기본 설정에서는 외부 포트를 노출하지 않습니다. 필요 시 compose override를 사용하거나 로컬에서 직접 `bootRun`을 실행하여 접근하세요.
 
 ## 환경 변수
 

@@ -35,11 +35,12 @@ yarn-error.log*
 dev-debug.log
 # Dependency directories
 node_modules/
-backend-java/target/
-backend-java/.idea/
-backend-java/.mvn/
-backend-java/.gradle/
-backend-java/build/
+backend-java-springboot/target/
+backend-java-springboot/.idea/
+backend-java-springboot/.mvn/
+backend-java-springboot/.gradle/
+backend-java-springboot/build/
+backend-python-fastapi/.venv/
 # Editor directories and files
 .idea
 .vscode

@@ -14,16 +14,32 @@ services:
     networks:
       - isochrone-internal
 
-  backend-java:
+  backend-java-springboot:
     build:
-      context: ./backend-java
+      context: ./backend-java-springboot
       dockerfile: Dockerfile
-    container_name: backend-java
+    container_name: backend-java-springboot
     environment:
       - OTP_API_BASE_URL=http://otp:8080/otp
       - SPRING_PROFILES_ACTIVE=default
     depends_on:
       - otp
+    networks:
+      - isochrone-internal
+
+  backend-python-fastapi:
+    build:
+      context: ./backend-python-fastapi
+      dockerfile: Dockerfile
+    container_name: backend-python-fastapi
+    environment:
+      - OTP_API_BASE_URL=http://otp:8080/otp
+      - ISOCHRONE_REQUEST_TIMEOUT=15
+      - ISOCHRONE_REQUEST_RETRIES=3
+    depends_on:
+      - otp
+    ports:
+      - "8000:8000"
     networks:
       - isochrone-internal
 
