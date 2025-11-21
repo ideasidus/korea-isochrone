@@ -234,14 +234,14 @@
       {
         "id": 4,
         "title": "FastAPI 기반 Isochrone API 래퍼 구현",
-        "description": "FastAPI 애플리케이션에 `/api/isochrone` 엔드포인트를 구현하여 내부 OTP Isochrone API를 호출하고 결과를 반환합니다.",
-        "status": "pending",
+        "description": "FastAPI 애플리케이션에 `/api/isochrone` 엔드포인트를 구현하여 내부 OTP 2.5.0의 TravelTime Sandbox API(`/otp/traveltime/isochrone`)를 호출하고 결과를 반환합니다.",
+        "status": "done",
         "dependencies": [
           3
         ],
         "priority": "high",
-        "details": "기존 `backend` 디렉토리의 Spring Boot 코드를 FastAPI 애플리케이션으로 교체합니다. `docker-compose.yml`의 `backend` 서비스를 수정하여 Python 환경과 `uvicorn` 실행 명령을 사용하도록 변경합니다. FastAPI 프로젝트 스캐폴딩 후, `httpx.AsyncClient`를 사용하여 `isochrone-internal` Docker 네트워크를 통해 OTP 서비스(`http://otp:8080`)를 호출하는 클라이언트 모듈을 구현합니다. 이 클라이언트에는 타임아웃 및 재시도 로직을 포함합니다. API 라우터에서는 Pydantic 모델을 사용하여 요청 파라미터(`fromPlace`, `mode`, `cutoffSec`, `buckets` 등)를 검증하고, OTP 호출 실패 시 적절한 HTTP 예외를 반환합니다. OTP 호스트(`http://otp:8080`)와 같은 설정은 환경 변수를 통해 주입합니다.",
-        "testStrategy": "`pytest`와 `httpx`의 `AsyncClient`를 모킹(mocking)하여 OTP API 호출 로직을 단위 테스트합니다. `docker-compose up`으로 전체 서비스를 실행한 후, `curl 'http://localhost:8080/api/isochrone?fromPlace=37.5665,126.9780&mode=TRANSIT&cutoffSec=1800'`와 같이 외부로 노출된 백엔드 엔드포인트를 호출하여 OTP로부터 응답이 정상적으로 프록시되는지 통합 테스트합니다.",
+        "details": "기존 `backend` 디렉토리의 Spring Boot 코드를 FastAPI 애플리케이션으로 교체합니다. FastAPI 애플리케이션은 사용자의 요청(`fromPlace`, `mode`, `cutoffSec`)을 받아 OTP 2.5.0의 TravelTime Sandbox API 형식으로 변환하여 `http://otp:8080/otp/traveltime/isochrone` 엔드포인트를 호출합니다. 변환 로직은 `fromPlace`를 `location`으로, `cutoffSec`을 ISO-8601 형식의 `cutoff`(예: 'PT1800S')로, `mode`를 `modes` 파라미터(예: 'WALK,TRANSIT')로 매핑하는 것을 포함합니다. `httpx.AsyncClient`를 사용하여 `isochrone-internal` Docker 네트워크를 통해 OTP 서비스를 호출하며, 타임아웃 및 재시도 로직을 포함합니다. API 라우터에서는 Pydantic 모델을 사용하여 요청 파라미터를 검증하고, OTP 호출 실패 시 적절한 HTTP 예외를 반환합니다. OTP 호스트(`http://otp:8080`)와 같은 설정은 환경 변수를 통해 주입합니다.",
+        "testStrategy": "`pytest`와 `httpx`의 `AsyncClient`를 모킹(mocking)하여 OTP API 호출 및 파라미터 변환 로직을 단위 테스트합니다. `docker-compose up`으로 전체 서비스를 실행한 후, `curl 'http://localhost:8080/api/isochrone?fromPlace=37.5665,126.9780&mode=TRANSIT&cutoffSec=1800'`와 같이 외부로 노출된 백엔드 엔드포인트를 호출하여, 요청이 OTP TravelTime API에 맞게 변환되고 응답이 정상적으로 프록시되는지 통합 테스트합니다.",
         "subtasks": [
           {
             "id": 1,
@@ -253,6 +253,62 @@
             "testStrategy": "`docker ps` 명령어를 실행하여 otp 컨테이너의 PORTS 항목에 '0.0.0.0:8080->8080/tcp'와 같이 포트 포워딩이 정상적으로 설정되었는지 확인합니다."
           },
           {
+            "id": 2,
+            "title": "OTP API 연동 클라이언트 구현 및 예외 처리",
+            "description": "`WebClient` 또는 `RestTemplate`을 사용하여 Docker 네트워크상의 OTP 서비스(`http://otp:8080/otp/routers/default/isochrone`)를 호출하는 `OtpClient` 컴포넌트를 구현합니다. OTP 서버의 응답이 없거나 오류(5xx, 4xx)가 발생했을 때, 커스텀 예외를 발생시키고 에러 로그를 기록하는 등 견고한 예외 처리 로직을 추가합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "`@Component` 어노테이션을 사용하여 `OtpClient.java`를 생성합니다. `application.yml` 또는 `application.properties`에 OTP 서버의 주소(`otp.api.url=http://otp:8080`)를 설정하고 `@Value`로 주입받아 사용합니다. OTP 통신 실패 시 `OtpClientException`과 같은 커스텀 예외를 정의하여 사용합니다.",
+            "testStrategy": "WireMock 또는 MockWebServer를 사용하여 OTP API를 모킹(mocking)하고, 클라이언트가 성공, 실패, 타임아웃 등 다양한 시나리오에서 올바르게 동작하는지 단위 테스트로 검증합니다."
+          },
+          {
+            "id": 3,
+            "title": "백엔드 API E2E 테스트 및 문서화",
+            "description": "Postman 또는 `curl`을 사용하여 로컬에서 실행된 백엔드 애플리케이션의 `/api/isochrone` 엔드포인트를 직접 호출합니다. `docker-compose`로 모든 서비스(otp, backend)가 실행 중인 상태에서, 요청이 백엔드를 거쳐 OTP까지 전달되고 최종 응답이 클라이언트에게 성공적으로 반환되는지 End-to-End 흐름을 검증합니다. `README.md`에 새로운 API 엔드포인트, 파라미터, 사용 예시를 업데이트합니다.",
+            "status": "done",
+            "dependencies": [
+              1
+            ],
+            "details": "FastAPI 백엔드가 `docker-compose`를 통해 실행 중인 상태에서, Postman 또는 curl을 사용하여 `http://localhost:8080/api/isochrone?fromPlace=37.5665,126.9780&mode=TRANSIT&cutoffSec=1800`와 같은 실제 사용 예시 요청을 보냅니다. FastAPI 애플리케이션이 내부적으로 파라미터를 변환하여 OTP 2.5.0의 TravelTime API와 통신하고, 유효한 GeoJSON 폴리곤을 반환하는지 확인합니다. `README.md`의 API 사용법 섹션을 FastAPI 버전에 맞게 수정합니다.\n<info added on 2025-11-17T15:40:41.055Z>\n사용자 피드백 반영: 백엔드 포트는 `8081`이 아닌 `8080`을 사용합니다. Postman/curl 테스트 시 사용할 예시 URL을 `http://localhost:8080/api/isochrone?fromPlace=37.5665,126.9780&mode=TRANSIT&cutoffSec=1800`로 수정합니다. `README.md` 문서 업데이트 시에도 `8080` 포트를 기준으로 작성합니다. E2E 테스트는 `docker-compose` 환경에서 외부로 노출된 `backend` 서비스(`localhost:8080`)를 대상으로 하며, `backend`가 내부 네트워크를 통해 OTP 서비스와 통신하는 흐름을 검증합니다.\n</info added on 2025-11-17T15:40:41.055Z>",
+            "testStrategy": "실제 좌표와 파라미터로 API를 호출하여 유효한 GeoJSON 응답을 받는지 확인합니다. 잘못된 파라미터(예: `fromPlace` 누락)를 보냈을 때 FastAPI가 Pydantic 검증을 통해 반환하는 422 Unprocessable Entity 응답이 정상적으로 오는지 확인합니다."
+          },
+          {
+            "id": 5,
+            "title": "Isochrone API 라우터 및 Pydantic 모델 구현",
+            "description": "FastAPI의 `APIRouter`를 사용하여 `/api/isochrone` 엔드포인트를 구현합니다. Pydantic 모델을 사용하여 요청 쿼리 파라미터(`fromPlace`, `mode`, `cutoffSec` 등)의 타입과 유효성을 검증합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "별도의 `router` 모듈(`backend/app/api/routes/isochrone.py`)에 isochrone 라우터를 정의합니다. `fromPlace`는 `str`로, `mode`는 `Literal['TRANSIT', 'WALK']`로, `cutoffSec`는 `int`로 받는 Pydantic 모델을 사용합니다. 라우터 핸들러 함수 내에서, 검증된 입력 파라미터를 OTP TravelTime API의 요구사항에 맞게 변환하는 로직(예: `cutoffSec`를 `PT{seconds}S` 형태의 ISO-8601 기간 문자열로 변환)을 구현합니다.",
+            "testStrategy": "단위 테스트(`pytest`)를 통해 유효한 파라미터와 유효하지 않은 파라미터를 각각 전달했을 때, 라우터가 서비스 로직을 호출하거나 422 에러를 올바르게 반환하는지 검증합니다."
+          },
+          {
+            "id": 6,
+            "title": "OTP 2.5.0 TravelTime API 연동을 위한 비동기 클라이언트 구현",
+            "description": "`httpx.AsyncClient`를 사용하여 OTP 서비스의 `/otp/traveltime/isochrone` 엔드포인트를 비동기적으로 호출하는 클라이언트 모듈을 구현합니다. OTP 서버의 응답이 없거나 오류가 발생했을 때의 예외 처리를 포함합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "OTP 클라이언트 로직을 `backend/app/services/otp_client.py` 모듈로 분리합니다. 이 클라이언트는 라우터로부터 전달받은 파라미터를 OTP API 명세에 맞게 변환하여 `/otp/traveltime/isochrone` 엔드포인트를 호출합니다: `fromPlace` -> `location`, `cutoffSec` -> `cutoff` (ISO-8601), `mode` -> `modes`. `httpx`의 타임아웃 설정을 적용하고, OTP 서버가 4xx/5xx 응답을 반환할 경우 `HTTPException`을 발생시켜 API 사용자에게 적절한 오류를 전달합니다. OTP API URL은 환경 변수에서 읽어와 설정합니다.",
+            "testStrategy": "`pytest`와 `pytest-asyncio`를 사용하고, `respx` 또는 `httpx.MockTransport`를 사용하여 OTP API를 모킹합니다. 성공, 서버 오류(500), 클라이언트 오류(400), 타임아웃 등 다양한 시나리오에서 클라이언트가 올바르게 동작하는지 단위 테스트로 검증합니다."
+          },
+          {
+            "id": 7,
+            "title": "FastAPI 백엔드 프로젝트 초기 설정",
+            "description": "backend 디렉터리에 FastAPI 기반 백엔드 프로젝트를 스캐폴딩하고 필수 의존성을 추가합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "uv 기반 Python 3.13 환경을 구성하고 pyproject.toml에 FastAPI, httpx, uvicorn[standard], pydantic-settings 등을 추가합니다. app/, tests/ 디렉터리를 마련하고 main.py 기본 엔트리를 작성한 뒤 docker-compose의 FastAPI 서비스가 uvicorn 명령으로 이 프로젝트를 실행하도록 Dockerfile을 구성합니다. 검증: UV_CACHE_DIR을 지정해 'uv sync'를 실행하고 'uv run uvicorn app.main:app --host 0.0.0.0 --port 8080' 또는 'uv run pytest'로 기동 여부를 확인합니다.",
+            "testStrategy": ""
+          },
+          {
+            "id": 8,
+            "title": "FastAPI 라우터 및 OTP 클라이언트 구현",
+            "description": "FastAPI 앱에  라우터와 OTP 연동 클라이언트를 추가합니다.",
+            "status": "done",
+            "dependencies": [],
+            "details": "Pydantic 쿼리 모델을 `backend/app/api/models.py`에 정의하고, `backend/app/api/routes/isochrone.py`의 라우터에서 `Depends`를 통해 주입합니다. `backend/app/services/otp_client.py`에 `httpx.AsyncClient`를 이용한 OTP 프록시 클라이언트를 구현합니다. 이 클라이언트는 OTP 2.5.0의 `/otp/traveltime/isochrone` 엔드포인트를 호출하며, `cutoffSec`을 ISO-8601 형식으로 변환하는 등 파라미터 매핑 로직을 포함합니다. 재시도/타임아웃 설정, 환경 변수 기반 설정 로직을 구현하고 GET 핸들러가 OTP 응답을 그대로 전달하도록 구성합니다. 검증: `respx` 또는 `httpx.MockTransport`로 OTP 호출을 모킹한 `pytest` 케이스를 `tests/` 디렉터리에 추가하고, `docker-compose` 환경에서 `curl`로 호출해 실제 응답이 전달되는지 확인합니다.",
+            "testStrategy": ""
+          },
+          {
             "id": 4,
             "title": "OTP API 연동 클라이언트 구현 및 예외 처리",
             "description": "`WebClient` 또는 `RestTemplate`을 사용하여 Docker 네트워크상의 OTP 서비스(`http://otp:8080/otp/routers/default/isochrone`)를 호출하는 `OtpClient` 컴포넌트를 구현합니다. OTP 서버의 응답이 없거나 오류(5xx, 4xx)가 발생했을 때, 커스텀 예외를 발생시키고 에러 로그를 기록하는 등 견고한 예외 처리 로직을 추가합니다.",
@@ -262,68 +318,6 @@
             ],
             "details": "`@Component` 어노테이션을 사용하여 `OtpClient.java`를 생성합니다. `application.yml` 또는 `application.properties`에 OTP 서버의 주소(`otp.api.url=http://otp:8080`)를 설정하고 `@Value`로 주입받아 사용합니다. OTP 통신 실패 시 `OtpClientException`과 같은 커스텀 예외를 정의하여 사용합니다.",
             "testStrategy": "WireMock 또는 MockWebServer를 사용하여 OTP API를 모킹(mocking)하고, 클라이언트가 성공, 실패, 타임아웃 등 다양한 시나리오에서 올바르게 동작하는지 단위 테스트로 검증합니다."
-          },
-          {
-            "id": 5,
-            "title": "백엔드 API E2E 테스트 및 문서화",
-            "description": "Postman 또는 `curl`을 사용하여 로컬에서 실행된 백엔드 애플리케이션의 `/api/isochrone` 엔드포인트를 직접 호출합니다. `docker-compose`로 모든 서비스(otp, backend)가 실행 중인 상태에서, 요청이 백엔드를 거쳐 OTP까지 전달되고 최종 응답이 클라이언트에게 성공적으로 반환되는지 End-to-End 흐름을 검증합니다. `README.md`에 새로운 API 엔드포인트, 파라미터, 사용 예시를 업데이트합니다.",
-            "status": "pending",
-            "dependencies": [
-              1
-            ],
-            "details": "FastAPI 백엔드가 `docker-compose`를 통해 실행 중인 상태에서, Postman 또는 curl을 사용하여 `http://localhost:8080/api/isochrone?fromPlace=37.5665,126.9780&mode=TRANSIT&cutoffSec=1800`와 같은 실제 사용 예시 요청을 보냅니다. FastAPI 애플리케이션이 내부 네트워크를 통해 OTP 서비스와 통신하여 유효한 GeoJSON 폴리곤을 반환하는지 확인합니다. `README.md`의 API 사용법 섹션을 FastAPI 버전에 맞게 수정합니다.\n<info added on 2025-11-17T15:40:41.055Z>\n사용자 피드백 반영: 백엔드 포트는 `8081`이 아닌 `8080`을 사용합니다. Postman/curl 테스트 시 사용할 예시 URL을 `http://localhost:8080/api/isochrone?fromPlace=37.5665,126.9780&mode=TRANSIT&cutoffSec=1800`로 수정합니다. `README.md` 문서 업데이트 시에도 `8080` 포트를 기준으로 작성합니다. E2E 테스트는 `docker-compose` 환경에서 외부로 노출된 `backend` 서비스(`localhost:8080`)를 대상으로 하며, `backend`가 내부 네트워크를 통해 OTP 서비스와 통신하는 흐름을 검증합니다.\n</info added on 2025-11-17T15:40:41.055Z>",
-            "testStrategy": "실제 좌표와 파라미터로 API를 호출하여 유효한 GeoJSON 응답을 받는지 확인합니다. 잘못된 파라미터(예: `fromPlace` 누락)를 보냈을 때 FastAPI가 Pydantic 검증을 통해 반환하는 422 Unprocessable Entity 응답이 정상적으로 오는지 확인합니다."
-          },
-          {
-            "id": 6,
-            "title": "FastAPI 프로젝트 전환 및 기본 설정",
-            "description": "`backend` 디렉토리의 기존 내용을 FastAPI 프로젝트 구조로 교체합니다. `requirements.txt`에 `fastapi`, `uvicorn`, `httpx` 등 필요한 의존성을 추가하고, `main.py`에 기본 FastAPI 앱을 설정합니다. `docker-compose.yml`의 `backend` 서비스를 수정하여 `Dockerfile`을 빌드하고 `uvicorn`으로 앱을 실행하도록 변경합니다.",
-            "status": "pending",
-            "dependencies": [
-              2
-            ],
-            "details": "`backend/Dockerfile`을 새로 작성하여 Python 환경을 구성하고 의존성을 설치합니다. `docker-compose.yml`의 `backend` 서비스에서 `build` 컨텍스트를 `./backend`로 설정하고, `command`를 `uvicorn main:app --host 0.0.0.0 --port 8000`으로 지정합니다. 포트 매핑은 `ports: - \"8080:8000\"`으로 유지합니다.",
-            "testStrategy": "`docker-compose up --build backend` 실행 시 FastAPI 애플리케이션이 오류 없이 시작되고, `http://localhost:8080/docs`에서 Swagger UI가 정상적으로 표시되는지 확인합니다."
-          },
-          {
-            "id": 7,
-            "title": "Isochrone API 라우터 및 Pydantic 모델 구현",
-            "description": "FastAPI의 `APIRouter`를 사용하여 `/api/isochrone` 엔드포인트를 구현합니다. Pydantic 모델을 사용하여 요청 쿼리 파라미터(`fromPlace`, `mode`, `cutoffSec` 등)의 타입과 유효성을 검증합니다.",
-            "status": "pending",
-            "dependencies": [
-              6
-            ],
-            "details": "별도의 `router` 모듈에 isochrone 라우터를 정의합니다. `fromPlace`는 `str`로 받되, 위도/경도 형식(예: '37.5,126.9')을 검증하는 로직을 추가합니다. `mode`는 `Literal` 타입을 사용하여 허용된 값('TRANSIT', 'WALK' 등)만 받도록 제한합니다. `cutoffSec`는 `int` 타입으로 받습니다.",
-            "testStrategy": "단위 테스트(`pytest`)를 통해 유효한 파라미터와 유효하지 않은 파라미터를 각각 전달했을 때, 라우터가 서비스 로직을 호출하거나 422 에러를 올바르게 반환하는지 검증합니다."
-          },
-          {
-            "id": 8,
-            "title": "OTP API 연동을 위한 비동기 클라이언트 구현",
-            "description": "`httpx.AsyncClient`를 사용하여 OTP 서비스(`http://otp:8080/otp/routers/default/isochrone`)를 비동기적으로 호출하는 클라이언트 모듈을 구현합니다. OTP 서버의 응답이 없거나 오류가 발생했을 때의 예외 처리를 포함합니다.",
-            "status": "pending",
-            "dependencies": [
-              6
-            ],
-            "details": "OTP 클라이언트 로직을 별도의 `service` 또는 `client` 모듈로 분리합니다. `httpx`의 타임아웃 설정을 적용하고, OTP 서버가 4xx/5xx 응답을 반환할 경우 `HTTPException`을 발생시켜 API 사용자에게 적절한 오류를 전달합니다. OTP API URL은 환경 변수에서 읽어와 설정합니다.",
-            "testStrategy": "`pytest`와 `pytest-asyncio`를 사용하고, `respx` 또는 `httpx.MockTransport`를 사용하여 OTP API를 모킹합니다. 성공, 서버 오류(500), 클라이언트 오류(400), 타임아웃 등 다양한 시나리오에서 클라이언트가 올바르게 동작하는지 단위 테스트로 검증합니다."
-          },
-          {
-            "id": 9,
-            "title": "FastAPI 백엔드 프로젝트 초기 설정",
-            "description": "backend 디렉터리에 FastAPI 기반 백엔드 프로젝트를 스캐폴딩하고 필수 의존성을 추가합니다.",
-            "details": "uv 기반 Python 3.13 환경을 구성하고 pyproject.toml에 FastAPI, httpx, uvicorn[standard], pydantic-settings 등을 추가합니다. app/, tests/ 디렉터리를 마련하고 main.py 기본 엔트리를 작성한 뒤 docker-compose의 FastAPI 서비스가 uvicorn 명령으로 이 프로젝트를 실행하도록 Dockerfile을 구성합니다. 검증: UV_CACHE_DIR을 지정해 'uv sync'를 실행하고 'uv run uvicorn app.main:app --host 0.0.0.0 --port 8080' 또는 'uv run pytest'로 기동 여부를 확인합니다.",
-            "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 4
-          },
-          {
-            "id": 10,
-            "title": "FastAPI 라우터 및 OTP 클라이언트 구현",
-            "description": "FastAPI 앱에  라우터와 OTP 연동 클라이언트를 추가합니다.",
-            "details": "Pydantic 쿼리 모델을 만들고 FastAPI Depends를 통해 주입합니다. httpx.AsyncClient를 이용한 OTP 프록시 클라이언트, 재시도/타임아웃 설정, 환경 변수 기반 설정 로직을 구현하고  GET 핸들러가 OTP 응답을 그대로 전달하도록 구성합니다. 검증: respx 또는 httpx MockTransport로 OTP 호출을 모킹한 pytest 케이스를 추가하고, docker compose 환경에서  으로 호출해 실제 응답이 전달되는지 확인합니다.",
-            "status": "pending",
-            "dependencies": [],
-            "parentTaskId": 4
           }
         ]
       },
@@ -845,7 +839,7 @@
       ],
       "created": "2025-11-15T08:57:00.336Z",
       "description": "Tasks for master context",
-      "updated": "2025-11-17T15:40:13.297Z"
+      "updated": "2025-11-21T06:05:12.766Z"
     }
   }
 }

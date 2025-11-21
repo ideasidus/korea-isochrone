@@ -27,7 +27,8 @@ class OtpClient:
         self._backoff = backoff_seconds
 
     async def fetch_isochrone(self, query: IsochroneQuery) -> dict[str, Any]:
-        url = f"/routers/{self._router_id}/isochrone"
+        # OTP 2.5.0 TravelTime API endpoint
+        url = "/traveltime/isochrone"
         params = query.to_query_params()
 
         for attempt in range(1, self._retries + 1):

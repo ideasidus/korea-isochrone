@@ -1,6 +1,6 @@
 services:
   otp:
-    image: opentripplanner/opentripplanner:2.8.1
+    image: opentripplanner/opentripplanner:2.5.0
     container_name: otp
     environment:
       - JAVA_TOOL_OPTIONS=-Xms8G -Xmx12G
