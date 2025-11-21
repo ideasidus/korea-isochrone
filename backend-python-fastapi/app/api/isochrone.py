@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from app.clients.otp_client import OtpClient, OtpClientError
 from app.schemas.isochrone import IsochroneQuery
 
-router = APIRouter(prefix="/api", tags=["isochrone"])
+router = APIRouter(prefix="/api/v1", tags=["isochrone"])
 
 
 def get_otp_client(request: Request) -> OtpClient:
@@ -24,4 +24,3 @@ async def read_isochrone(
             status_code=exc.status_code,
             detail=exc.message,
         ) from exc
-

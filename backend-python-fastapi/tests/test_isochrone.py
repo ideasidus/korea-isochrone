@@ -35,7 +35,7 @@ async def test_isochrone_success_with_default_modes():
 
         async with httpx.AsyncClient(app=app, base_url="http://testserver") as client:
             response = await client.get(
-                "/api/isochrone",
+                "/api/v1/isochrone",
                 params={"lat": 37.5665, "lon": 126.9780, "cutoffMin": 10},
             )
 
@@ -66,7 +66,7 @@ async def test_isochrone_success_with_custom_modes():
 
         async with httpx.AsyncClient(app=app, base_url="http://testserver") as client:
             response = await client.get(
-                "/api/isochrone",
+                "/api/v1/isochrone",
                 params={
                     "lat": 37.4979,
                     "lon": 127.0276,
@@ -92,7 +92,7 @@ async def test_isochrone_translates_otp_errors():
 
         async with httpx.AsyncClient(app=app, base_url="http://testserver") as client:
             response = await client.get(
-                "/api/isochrone",
+                "/api/v1/isochrone",
                 params={"lat": 37.5665, "lon": 126.9780, "cutoffMin": 5},
             )
 
@@ -108,7 +108,7 @@ async def test_isochrone_validation_invalid_latitude():
     async with httpx.AsyncClient(app=app, base_url="http://testserver") as client:
         # 위도 범위를 벗어난 값 (>90)
         response = await client.get(
-            "/api/isochrone",
+            "/api/v1/isochrone",
             params={"lat": 100.0, "lon": 126.9780, "cutoffMin": 10},
         )
 
@@ -125,7 +125,7 @@ async def test_isochrone_validation_invalid_longitude():
     async with httpx.AsyncClient(app=app, base_url="http://testserver") as client:
         # 경도 범위를 벗어난 값 (<-180)
         response = await client.get(
-            "/api/isochrone",
+            "/api/v1/isochrone",
             params={"lat": 37.5665, "lon": -200.0, "cutoffMin": 10},
         )
 
@@ -142,11 +142,10 @@ async def test_isochrone_validation_missing_required_params():
     async with httpx.AsyncClient(app=app, base_url="http://testserver") as client:
         # lat 파라미터 누락
         response = await client.get(
-            "/api/isochrone",
+            "/api/v1/isochrone",
             params={"lon": 126.9780, "cutoffMin": 10},
         )
 
     assert response.status_code == 422
     detail = response.json()["detail"]
     assert any("lat" in str(error["loc"]) for error in detail)
-

@@ -71,7 +71,7 @@ FastAPI 백엔드를 통해 대중교통 등시선(Isochrone)을 생성할 수 �
 ### 엔드포인트
 
 ```
-GET http://localhost:8000/api/isochrone
+GET http://localhost:8000/api/v1/isochrone
 ```
 
 ### 요청 파라미터
@@ -121,22 +121,22 @@ GeoJSON FeatureCollection 형식으로 등시선 폴리곤을 반환합니다.
 
 **서울 시청 기준 30분 대중교통 등시선:**
 ```bash
-curl "http://localhost:8000/api/isochrone?lat=37.5665&lon=126.9780&cutoffMin=30"
+curl "http://localhost:8000/api/v1/isochrone?lat=37.5665&lon=126.9780&cutoffMin=30"
 ```
 
 **강남역 기준 60분 대중교통 등시선:**
 ```bash
-curl "http://localhost:8000/api/isochrone?lat=37.4979&lon=127.0276&cutoffMin=60"
+curl "http://localhost:8000/api/v1/isochrone?lat=37.4979&lon=127.0276&cutoffMin=60"
 ```
 
 **자전거 전용 30분 등시선:**
 ```bash
-curl "http://localhost:8000/api/isochrone?lat=37.5665&lon=126.9780&cutoffMin=30&modes=BICYCLE"
+curl "http://localhost:8000/api/v1/isochrone?lat=37.5665&lon=126.9780&cutoffMin=30&modes=BICYCLE"
 ```
 
 **도보 + 대중교통 복합 이동 45분 등시선:**
 ```bash
-curl "http://localhost:8000/api/isochrone?lat=37.4979&lon=127.0276&cutoffMin=45&modes=WALK,TRANSIT"
+curl "http://localhost:8000/api/v1/isochrone?lat=37.4979&lon=127.0276&cutoffMin=45&modes=WALK,TRANSIT"
 ```
 
 ### 기술 스택

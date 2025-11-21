@@ -34,6 +34,6 @@ FastAPI는 기본 Swagger UI를 제공합니다.
 
 ## Docker Compose
 
-`docker-compose.yml`의 `backend-python-fastapi` 서비스가 이 모듈을 빌드 및 실행합니다. 기본적으로 호스트 `8080` 포트를 `uvicorn` 포트(8000)에 바인딩하므로, `docker compose up backend-python-fastapi` 실행 후 `http://localhost:8080/api/isochrone?...`으로 접근하면 OTP 응답을 받을 수 있습니다.
+`docker-compose.yml`의 `backend-python-fastapi` 서비스가 이 모듈을 빌드 및 실행합니다. 기본적으로 호스트 `8080` 포트를 `uvicorn` 포트(8000)에 바인딩하므로, `docker compose up backend-python-fastapi` 실행 후 `http://localhost:8080/api/v1/isochrone?...`으로 접근하면 OTP 응답을 받을 수 있습니다.
 
 [^otp-base]: OpenTripPlanner Transmodel GraphQL 문서(`doc/user/apis/TransmodelApi.md`)에서는 로컬 엔드포인트를 `http://localhost:8080/otp/transmodel/v3`와 같이 `/otp` 프리픽스로 안내합니다. 동일한 기준을 사용해 OTP Base URL을 설정합니다.
