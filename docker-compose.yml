@@ -38,8 +38,20 @@ services:
       - ISOCHRONE_REQUEST_RETRIES=3
     depends_on:
       - otp
-    ports:
-      - "8000:8000"
+    networks:
+      - isochrone-internal
+
+  frontend-vue3:
+    build:
+      context: ./frontend-vue3
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://backend-python-fastapi:8000}
+        VITE_KAKAO_REST_API_KEY: ${VITE_KAKAO_REST_API_KEY:-}
+        VITE_KAKAO_JS_KEY: ${VITE_KAKAO_JS_KEY:-}
+    container_name: frontend-vue3
+    depends_on:
+      - backend-python-fastapi
     networks:
       - isochrone-internal
 
