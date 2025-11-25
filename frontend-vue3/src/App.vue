@@ -19,6 +19,9 @@ const selectedPlace = ref(null)
 const cutoffMinutes = ref(30)
 const mode = ref('DEFAULT')
 const arriveBy = ref(false)
+const useCustomTime = ref(false)
+const customDate = ref('')
+const customTime = ref('')
 const backendError = ref('')
 const isRequestingIsochrone = ref(false)
 const isoFeatures = ref([])
@@ -141,6 +144,11 @@ const requestIsochrone = async () => {
       params.modes = [mode.value]
     }
 
+    if (useCustomTime.value && customDate.value && customTime.value) {
+      params.date = customDate.value
+      params.time = customTime.value
+    }
+
     const { data } = await axios.get(`${apiBaseUrl}/api/v1/isochrone`, { params })
     isoFeatures.value = data?.features ?? []
   } catch (error) {
@@ -212,11 +220,31 @@ const requestIsochrone = async () => {
         </div>
       </div>
 
-      <div class="field field--inline">
-        <label>
-          <input v-model="arriveBy" type="checkbox" />
-          도착 기준(arriveBy)
-        </label>
+      <div class="grid">
+        <div class="field field--inline">
+          <label>
+            <input v-model="arriveBy" type="checkbox" />
+            도착 기준(arriveBy)
+          </label>
+        </div>
+        <div class="field field--inline custom-time-toggle">
+          <label>
+            <input v-model="useCustomTime" type="checkbox" />
+            날짜/시간 지정
+          </label>
+          <small>날짜는 평일/주말·공휴일 등 GTFS 캘린더를 반영하기 위해 필요합니다.</small>
+        </div>
+      </div>
+
+      <div class="grid" v-if="useCustomTime">
+        <div class="field">
+          <label>날짜</label>
+          <input v-model="customDate" type="date" />
+        </div>
+        <div class="field">
+          <label>시간</label>
+          <input v-model="customTime" type="time" />
+        </div>
       </div>
 
       <button class="primary" :disabled="isRequestingIsochrone" @click="requestIsochrone">

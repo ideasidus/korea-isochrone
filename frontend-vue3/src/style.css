@@ -81,6 +81,17 @@ body {
   gap: 0.5rem;
 }
 
+.custom-time-toggle {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.custom-time-toggle small {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
 label {
   font-weight: 600;
   font-size: 0.9rem;
